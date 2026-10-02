@@ -1,0 +1,3 @@
+# Local test harness: contains real room names and map data
+test/
+node_modules/
