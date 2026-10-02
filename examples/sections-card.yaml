@@ -1,0 +1,7 @@
+# In a Sections dashboard, give the card the full width and a fixed height.
+# Below roughly 600 px of width the card switches to the phone layout on its own.
+type: custom:dreame-vacuum-panel-card
+entity: vacuum.my_robot
+height: 720px
+grid_options:
+  columns: full

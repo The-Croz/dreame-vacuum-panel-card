@@ -1,0 +1,19 @@
+# A full-screen view for the card.
+# Dashboard → ⋮ → Edit dashboard → Add view → set "View type" to Panel (single card),
+# then add the card below (or paste the whole view in the raw configuration editor).
+title: Vacuum
+path: vacuum
+icon: mdi:robot-vacuum
+type: panel
+cards:
+  - type: custom:dreame-vacuum-panel-card
+    entity: vacuum.my_robot          # your Dreame vacuum
+    # Everything below is optional:
+    # map_entity: camera.my_robot_map  # found automatically
+    # title: Downstairs
+    # layout: auto                     # auto | desktop | tablet | phone
+    # default_target: all              # all | rooms
+    # care_warning: 20                 # % at which a part shows a care alert
+    # care_critical: 10                # % at which the alert turns red
+    # accent_color: "#0a76b8"          # defaults to your theme's primary color
+    # height: 100vh                    # defaults to the visible screen height
