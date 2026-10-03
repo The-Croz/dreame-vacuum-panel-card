@@ -3,5 +3,6 @@
 type: custom:dreame-vacuum-panel-card
 entity: vacuum.my_robot
 height: 720px
+fullscreen: false   # stay inside the section instead of filling the screen
 grid_options:
   columns: full
