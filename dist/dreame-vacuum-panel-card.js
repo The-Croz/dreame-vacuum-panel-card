@@ -1655,6 +1655,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._schedule();
     }
 
+    _move(rotation, velocity) {
+      return this._call('dreame_vacuum', 'vacuum_remote_control_move_step', { entity_id: this._config.entity, rotation, velocity }, true);
+    }
+
     _startHold(btn) {
       this._stopHold();
       const dir = btn.dataset.hold;
@@ -1662,16 +1666,26 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const cmd = { fwd: [0, vel], back: [0, -vel], left: [64, 0], right: [-64, 0] }[dir];
       if (!cmd) return;
       btn.classList.add('held');
-      const send = () => this._call('dreame_vacuum', 'vacuum_remote_control_move_step', { entity_id: this._config.entity, rotation: cmd[0], velocity: cmd[1] }, true);
-      send();
-      this._hold = { btn, t: setInterval(send, 450) };
+      const hold = { btn, dead: false, t: null };
+      this._hold = hold;
+      // Wait for each step to finish before sending the next. Firing on a fixed timer queues
+      // commands faster than the robot runs them, so it keeps rolling after release.
+      const tick = async () => {
+        if (hold.dead) return;
+        await this._move(cmd[0], cmd[1]);
+        if (!hold.dead) hold.t = setTimeout(tick, 100);
+      };
+      tick();
     }
 
     _stopHold() {
-      if (!this._hold) return;
-      clearInterval(this._hold.t);
-      this._hold.btn.classList.remove('held');
+      const hold = this._hold;
+      if (!hold) return;
+      hold.dead = true;
+      clearTimeout(hold.t);
+      hold.btn.classList.remove('held');
       this._hold = null;
+      this._move(0, 0); // explicit stop step
     }
 
     /* ---------- actions ---------- */
