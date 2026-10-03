@@ -77,6 +77,7 @@
   /* ------------------------------------------------------------------ */
   const CSS = `
 :host{display:block}
+:host(.fs){height:0}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 ha-card.dv{
@@ -104,6 +105,7 @@ ha-card.dv{
   font-family:var(--ha-font-family-body,Roboto,'Helvetica Neue',system-ui,sans-serif);
   -webkit-font-smoothing:antialiased;
 }
+ha-card.dv.fs{position:fixed;top:var(--dv-top,0);left:var(--dv-left,0);width:var(--dv-w,100%);bottom:0;height:auto;min-height:0;z-index:1;border-radius:0;overscroll-behavior:none}
 ha-icon{--mdc-icon-size:20px;display:inline-flex;flex-shrink:0}
 button{font-family:inherit;color:inherit}
 .panel{background:var(--dv-bg);border:1px solid var(--dv-div);border-radius:var(--dv-r);min-width:0}
@@ -283,7 +285,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .ph .map{top:72px;bottom:var(--sheet-h,300px)}
 .ph-top{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;align-items:center;z-index:4}
 .spill{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;padding:6px 14px;border-radius:26px;min-height:52px;background:var(--dv-bg);border:1px solid var(--dv-div);box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.sheet{position:absolute;left:0;right:0;bottom:0;max-height:74%;overflow:auto;background:var(--dv-bg);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:0 14px 14px;z-index:3;display:flex;flex-direction:column;gap:12px}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:74%;overflow:auto;background:var(--dv-bg);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;flex-direction:column;gap:12px}
 .grab{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--dv-div);margin-top:8px;flex-shrink:0}
 .stabs{display:flex;border-bottom:1px solid var(--dv-div);margin:0 -14px;padding:0 10px;flex-shrink:0}
 .stabs button{flex:1 1 0;min-height:44px;border:0;background:none;font-size:14px;font-weight:500;color:var(--dv-text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;border-bottom:2px solid transparent;margin-bottom:-1px}
@@ -331,7 +333,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const labels = {
         entity: 'Vacuum', map_entity: 'Map camera (optional)', title: 'Title (optional)', layout: 'Layout',
         height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', default_target: 'Default cleaning target',
-        back_path: 'Back button path (e.g. /dashboard-home)', show_menu: 'Show HA menu button',
+        show_back: 'Show back button', show_menu: 'Show HA menu button', fullscreen: 'Fill the screen in panel views',
         care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)',
       };
       return {
@@ -346,8 +348,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
               { name: 'default_target', selector: { select: { mode: 'dropdown', options: [{ value: 'all', label: 'All rooms' }, { value: 'rooms', label: 'Rooms' }] } } },
               { name: 'height', selector: { text: {} } },
               { name: 'accent_color', selector: { text: {} } },
-              { name: 'back_path', selector: { text: {} } },
+              { name: 'show_back', selector: { boolean: {} } },
               { name: 'show_menu', selector: { boolean: {} } },
+              { name: 'fullscreen', selector: { boolean: {} } },
               { name: 'care_warning', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
               { name: 'care_critical', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
             ],
@@ -361,7 +364,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!config || !config.entity || !String(config.entity).startsWith('vacuum.')) {
         throw new Error('Set "entity" to your Dreame vacuum, e.g. entity: vacuum.my_robot');
       }
-      this._config = { layout: 'auto', care_warning: 20, care_critical: 10, default_target: 'all', ...config };
+      this._config = { layout: 'auto', fullscreen: true, care_warning: 20, care_critical: 10, default_target: 'all', ...config };
       this._ui.target = this._ui.target || this._config.default_target;
       this._map = null;
       this._sig = null;
@@ -400,11 +403,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           if (w > 0) this._w = w;
           const rendered = this._shellKey ? this._shellKey.split(':')[0] : null;
           if (rendered !== this._layout()) this._schedule();
-          else this._fit();
+          else { this._applyFs(); this._fit(); }
         });
       }
       this._ro.observe(this);
-      this._onWin = this._onWin || (() => this._applyHeight());
+      this._onWin = this._onWin || (() => this._applyFs());
       window.addEventListener('resize', this._onWin);
       window.visualViewport && window.visualViewport.addEventListener('resize', this._onWin);
       this._schedule();
@@ -416,6 +419,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       window.removeEventListener('resize', this._onWin);
       window.visualViewport && window.visualViewport.removeEventListener('resize', this._onWin);
       clearTimeout(this._hTimer);
+      this._unlockScroll();
       this._ro && this._ro.disconnect();
       this._sheetRO && this._sheetRO.disconnect();
       this._stopHold();
@@ -688,7 +692,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (key !== this._shellKey) {
         this._shellKey = key;
         this._regions = {};
-        const h = this._config.height || `${Math.max(480, this._availHeight())}px`;
+        const h = this._config.height || 'calc(100dvh - var(--header-height, 56px) - 16px)';
         const accent = this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '';
         root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}" style="--dv-h:${esc(h)};${accent}">${this._shell(lay, view)}</ha-card>`;
         const img = root.querySelector('[data-img]');
@@ -709,7 +713,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           this._sheetRO.observe(sheet);
         }
       }
-      this._applyHeight();
+      this._applyFs();
       this._renderRegions();
       const img = root.querySelector('[data-img]');
       const url = this._imgUrl();
@@ -720,47 +724,56 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._fit();
     }
 
-    /* Height available below the card's own top edge, measured against the real
-       visible viewport. Summing scrollTop up the composed tree recovers the card's
-       position at scroll 0, so HA headers, tab bars, kiosk mode and iOS toolbars
-       are all accounted for without hard-coding any of them. */
-    _availHeight() {
-      let top = this.getBoundingClientRect().top;
-      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) top += n.scrollTop || 0;
-      const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-      return Math.floor(vh - top);
-    }
-
-    _scrollOverflow() {
-      let max = 0;
+    /* "App within an app": in a panel view the card leaves HA's flow and pins itself to the
+       visible viewport (position:fixed), starting just below HA's header. The page scroller is
+       locked while mounted, so there is no height maths to get wrong and nothing to scroll. */
+    _scrollers() {
+      const out = [];
       for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
-        const root = n === document.documentElement;
-        if (!root) {
-          const oy = getComputedStyle(n).overflowY;
-          if (oy !== 'auto' && oy !== 'scroll' && oy !== 'overlay') continue;
-        }
-        const el = root ? (document.scrollingElement || n) : n;
-        max = Math.max(max, el.scrollHeight - el.clientHeight);
+        if (n === document.documentElement) { out.push(document.documentElement); continue; }
+        const oy = getComputedStyle(n).overflowY;
+        if (oy === 'auto' || oy === 'scroll' || oy === 'overlay') out.push(n);
       }
-      return max;
+      return out;
     }
 
-    _applyHeight() {
-      if (this._config?.height) return;
+    _fsWanted() {
+      const fs = this._config?.fullscreen;
+      if (fs === false) return false;
+      if (fs === 'force') return true;
+      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
+        if (n.localName === 'hui-panel-view') return true;
+        if (/dialog|preview/.test(n.localName)) return false;
+      }
+      return false;
+    }
+
+    _unlockScroll() {
+      if (!this._locked) return;
+      this._locked.forEach((prev, el) => { el.style.overflow = prev; });
+      this._locked = null;
+    }
+
+    _applyFs() {
       const card = this.shadowRoot.querySelector('ha-card.dv');
       if (!card || !this.isConnected) return;
-      let px = Math.max(480, this._availHeight());
-      // The viewport maths can miss padding or safe-area insets HA adds around the view.
-      // Ask the browser: if an ancestor still scrolls with our height applied, trim the excess.
-      card.style.setProperty('--dv-h', `${px}px`);
-      const over = this._scrollOverflow();
-      if (over > 0) px = Math.max(480, px - over);
-      const h = `${px}px`;
-      card.style.setProperty('--dv-h', h);
-      if (this._lastH !== h) {
-        this._lastH = h;
-        this._fit();
-      }
+      const on = this._fsWanted();
+      this.classList.toggle('fs', on);
+      card.classList.toggle('fs', on);
+      if (!on) { this._unlockScroll(); return; }
+      this._locked = this._locked || new Map();
+      this._scrollers().forEach((el) => {
+        if (this._locked.has(el)) return;
+        this._locked.set(el, el.style.overflow);
+        el.scrollTop = 0;
+        el.style.overflow = 'hidden';
+      });
+      const r = this.getBoundingClientRect();
+      card.style.setProperty('--dv-top', `${Math.max(0, r.top)}px`);
+      card.style.setProperty('--dv-left', `${r.left}px`);
+      card.style.setProperty('--dv-w', `${r.width}px`);
+      const size = `${card.clientWidth}x${card.clientHeight}`;
+      if (size !== this._fsSize) { this._fsSize = size; this._fit(); }
     }
 
     _placeSheet() {
@@ -852,623 +865,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     /* ---------- regions ---------- */
     _region(name) {
       switch (name) {
-        case 'nav': return this._nav();
-        case 'status': return this._statusBlock();
-        case 'cleaning': return this._cleaningBlock();
-        case 'dock': return this._dockBlock(false);
-        case 'carebanner': return this._careBanner();
-        case 'overlay': return this._overlay();
-        case 'maptop': return this._mapTop();
-        case 'mapbottom': return this._mapBottom();
-        case 'pop': return this._pop();
-        case 'phtop': return this._phoneTop();
-        case 'toast': return this._toast();
-        case 'sheet': return this._sheet();
-        case 'phhead': return this._phoneHead();
-        case 'view': return this._viewBody();
-        default: return '';
-      }
-    }
-
-    _views() {
-      return [
-        ['clean', 'Clean', 'mdi:robot-vacuum'],
-        ['dock', 'Dock', 'mdi:home-lightning-bolt-outline'],
-        ['care', 'Care', 'mdi:wrench-outline'],
-        ['settings', 'Settings', 'mdi:tune-variant'],
-        ['history', 'History', 'mdi:history'],
-        ['remote', 'Remote', 'mdi:gamepad-variant-outline'],
-      ];
-    }
-
-    _nav() {
-      const n = this._notes().length;
-      const lay = this._layout();
-      const items = this._views().map(([id, label, icon]) => {
-        const on = this._ui.view === id;
-        const badge = id === 'care' && n ? `<span class="badge">${n}</span>` : '';
-        return `<button class="${on ? 'on' : ''}" data-a="view" data-v="${id}" ${on ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label}</span>${badge}</button>`;
-      }).join('');
-      if (lay === 'desktop') return `<div class="me" title="${esc(this._title())}">${ic('mdi:robot-vacuum')}</div>${items}`;
-      return items;
-    }
-
-    _battery() {
-      const b = num(this._a.battery ?? this._live('sensor', 'battery_level')?.state);
-      if (b === null) return { v: null, icon: 'mdi:battery-unknown' };
-      const step = clamp(Math.round(b / 10) * 10, 0, 100);
-      const charging = this._a.charging || this._v.state === 'docked' && b < 100;
-      const icon = step === 100 ? 'mdi:battery' : step === 0 ? 'mdi:battery-outline' : `mdi:battery${charging ? '-charging' : ''}-${step}`;
-      return { v: b, icon };
-    }
-
-    _runButton(cls = 'btn pri', extra = '') {
-      const s = this._status();
-      const u = this._ui;
-      let label, icon = 'mdi:play', dis = false;
-      if (s.running) { label = 'Pause'; icon = 'mdi:pause'; }
-      else if (s.paused) { label = 'Resume'; }
-      else {
-        const n = u.sel.length;
-        if (u.target === 'rooms') { label = n ? `Clean ${n} room${n === 1 ? '' : 's'}` : 'Pick rooms'; dis = !n; }
-        else if (u.target === 'zone') { label = u.zone ? 'Clean zone' : 'Draw a zone'; dis = !u.zone; }
-        else if (u.target === 'spot') { label = u.spot ? 'Spot clean' : 'Tap the map'; dis = !u.spot; }
-        else label = 'Clean all';
-      }
-      return `<button class="${cls}" data-a="run" ${dis ? 'disabled' : ''} ${extra}>${ic(icon)}${label}</button>`;
-    }
-
-    _careChip() {
-      const notes = this._notes();
-      if (!notes.length) return '';
-      const crit = notes.some((x) => x.level === 'crit');
-      return `<button class="carechip ${crit ? 'crit' : ''}" data-a="pop" data-v="care">${ic('mdi:bell-alert-outline')}${notes.length} care ${notes.length === 1 ? 'alert' : 'alerts'}</button>`;
-    }
-
-    _statusBlock() {
-      const s = this._status();
-      const a = this._a;
-      const bat = this._battery();
-      const prog = num(a.cleaning_progress);
-      const area = this._measure('cleaned_area', 'cleaned_area', 'm²');
-      const time = this._measure('cleaning_time', 'cleaning_time', 'min');
-      const ssel = this._select('suction_level');
-      const hsel = this._select('mop_pad_humidity') || this._select('water_volume');
-      const suction = ssel ? this._opt(ssel.so, ssel.value, false) : (a.suction_level || '');
-      const hum = hsel ? this._opt(hsel.so, hsel.value, false) : '';
-      const lay = this._layout();
-      const showProg = (s.running || s.paused) && prog !== null;
-      return `<div class="st">
-        <div class="stack-s grow">
-          <div class="rowf" style="flex-wrap:wrap">
-            <h1 class="h" style="font-size:20px">${esc(this._title())}</h1>
-            <span class="rowf small muted"><span class="dot ${s.dot}"></span>${esc(s.text)}</span>
-            <span class="grow"></span>${this._careChip()}
-          </div>
-          ${showProg ? `<div class="rowf"><div class="bar grow"><i style="width:${clamp(prog, 0, 100)}%"></i></div><span class="small" style="font-variant-numeric:tabular-nums">${prog}%</span></div>` : ''}
-          <div class="meta">
-            ${bat.v !== null ? `<span>${ic(bat.icon)}<b>${bat.v}%</b> battery</span>` : ''}
-            ${area ? `<span>${ic('mdi:texture-box')}<b>${esc(area.text)}</b> ${s.running || s.paused ? 'cleaned' : 'last run'}</span>` : ''}
-            ${time ? `<span>${ic('mdi:timer-outline')}<b>${esc(time.text)}</b></span>` : ''}
-            ${lay === 'desktop' && suction ? `<span>${ic('mdi:fan')}${esc(suction)}${hum ? ` · ${esc(hum)}` : ''}</span>` : ''}
-          </div>
-        </div>
-        <div class="rowf">
-          <button class="ibtn" data-a="svc" data-v="locate" aria-label="Locate robot" title="Locate">${ic('mdi:map-marker-radius-outline')}</button>
-          <button class="ibtn" data-a="svc" data-v="return_to_base" aria-label="Send to dock" title="Send to dock">${ic('mdi:home-import-outline')}</button>
-          <button class="ibtn" data-a="svc" data-v="stop" aria-label="Stop" title="Stop">${ic('mdi:stop')}</button>
-          ${this._runButton('btn pri', 'style="min-width:150px;margin-left:6px"')}
-        </div>
-      </div>`;
-    }
-
-    _seg(sel, opts = {}) {
-      if (!sel || !sel.options.length) return '';
-      const label = opts.label ? `<span class="lbl">${esc(opts.label)}</span>` : '';
-      if (sel.options.length > (opts.max || 4)) {
-        return `<div class="stack-s">${label}<select class="sel" data-a="optsel" data-e="${sel.id}" aria-label="${esc(opts.label || '')}">${sel.options.map((o) => `<option value="${esc(o)}" ${o === sel.value ? 'selected' : ''}>${esc(this._opt(sel.so, o, false))}</option>`).join('')}</select></div>`;
-      }
-      const btns = sel.options.map((o) => {
-        const on = o === sel.value;
-        const icon = opts.icons && MODE_ICON[o] ? ic(MODE_ICON[o]) : '';
-        return `<button class="${on ? 'on' : ''}" aria-pressed="${on}" data-a="opt" data-e="${sel.id}" data-v="${esc(o)}" title="${esc(this._opt(sel.so, o, false))}" ${opts.icons ? 'style="min-height:58px"' : ''}>${icon}${esc(this._opt(sel.so, o))}</button>`;
-      }).join('');
-      return `<div class="stack-s">${label}<div class="seg ${opts.dis ? 'dis' : ''}" role="group" aria-label="${esc(opts.label || '')}">${btns}</div></div>`;
-    }
-
-    _switchRow(key, title, sub, icon) {
-      const s = this._live('switch', key);
-      if (!s) return '';
-      const on = s.state === 'on';
-      return `<div class="rowf" style="min-height:48px">${icon ? ic(icon, 'style="color:var(--dv-text2)"') : ''}<div class="grow"><div style="font-size:14px;font-weight:500">${esc(title)}</div>${sub ? `<div class="xs muted">${esc(sub)}</div>` : ''}</div>
-        <button class="sw" role="switch" aria-checked="${on}" aria-label="${esc(title)}" data-a="toggle" data-e="${s.entity_id}"></button></div>`;
-    }
-
-    _cleaningControls() {
-      const genius = this._select('cleangenius');
-      const geniusOn = genius && !/^off$/i.test(genius.value);
-      const custom = this._live('switch', 'customized_cleaning')?.state === 'on';
-      const manualDis = geniusOn || custom;
-      const parts = [];
-      const toggles = [];
-      if (genius) toggles.push(this._seg(genius, { label: 'CleanGenius' }));
-      const cust = this._switchRow('customized_cleaning', 'Per-room settings', 'Use each room’s saved preferences', 'mdi:view-grid-outline');
-      if (cust) toggles.push(cust);
-      if (toggles.length) parts.push(`<div class="stack-s">${toggles.join('')}</div>`);
-      parts.push(this._seg(this._select('cleaning_mode'), { label: 'Mode', icons: true }));
-      parts.push(this._seg(this._select('suction_level'), { label: 'Suction', dis: manualDis }));
-      parts.push(this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume', dis: manualDis }));
-      parts.push(this._seg(this._select('cleaning_route'), { label: 'Route', dis: manualDis }));
-      if (this._ui.target !== 'all') {
-        parts.push(`<div class="stack-s"><span class="lbl">Passes</span><div class="seg" role="group" aria-label="Passes">${[1, 2, 3].map((p) => `<button class="${this._ui.passes === p ? 'on' : ''}" aria-pressed="${this._ui.passes === p}" data-a="passes" data-v="${p}">${p}×</button>`).join('')}</div></div>`);
-      }
-      if (manualDis) parts.push(`<div class="xs muted">${geniusOn ? 'CleanGenius is choosing suction, water and route.' : 'Per-room settings are on, so each room uses its own settings.'}</div>`);
-      return parts.filter(Boolean).join('');
-    }
-
-    _scopeText() {
-      const u = this._ui;
-      const rooms = this._rooms();
-      if (u.target === 'rooms') return `${u.sel.length} of ${rooms.length} rooms`;
-      if (u.target === 'zone') return u.zone ? '1 zone' : 'No zone yet';
-      if (u.target === 'spot') return u.spot ? '1 spot' : 'No spot yet';
-      return 'Whole map';
-    }
-
-    _cleaningBlock() {
-      return `<div class="stack" style="gap:16px"><div class="between"><h2 class="h">Cleaning</h2><span class="small muted">${esc(this._scopeText())}</span></div>${this._cleaningControls()}</div>`;
-    }
-
-    _dockState() {
-      const a = this._a;
-      if (a.washing) return 'Washing mops';
-      if (a.drying) {
-        const left = num(a.drying_left ?? this._live('sensor', 'drying_left')?.state);
-        return `Drying mops${left ? ` · ${left} min left` : ''}`;
-      }
-      const ae = this._live('sensor', 'auto_empty_status');
-      if (ae && !/idle/i.test(ae.state)) return this._fmt(ae);
-      if (!ae && a.auto_empty_status && !/idle/i.test(a.auto_empty_status)) return human(a.auto_empty_status);
-      const base = this._live('sensor', 'self_wash_base_status');
-      if (base && !/idle/i.test(base.state)) return this._fmt(base);
-      return a.docked || this._v.state === 'docked' ? 'Ready · robot docked' : 'Ready';
-    }
-
-    _levels() {
-      const a = this._a;
-      const lv = [];
-      const tank = (k, label) => {
-        const v = a[k];
-        if (v === undefined) return;
-        const ok = /^(installed|normal|ok)$/i.test(String(v));
-        lv.push(`<div class="lv ${ok ? 'ok' : 'warn'}"><span class="muted">${label}</span><b>${ok ? 'OK' : esc(human(v))}</b></div>`);
-      };
-      if (a.low_water_warning && !/no warning/i.test(a.low_water_warning)) lv.push(`<div class="lv warn"><span class="muted">Clean water</span><b>${esc(human(a.low_water_warning))}</b></div>`);
-      else tank('clean_water_tank_status', 'Clean water');
-      tank('dirty_water_tank_status', 'Dirty water');
-      tank('dust_bag_status', 'Dust bag');
-      const det = num(a.detergent_left);
-      if (det !== null) lv.push(`<div class="lv ${det <= (this._config.care_warning ?? 20) ? 'warn' : ''}"><span class="muted">Detergent</span><b>${det}%</b></div>`);
-      return lv.length ? `<div class="levels">${lv.join('')}</div>` : '';
-    }
-
-    _dockActions() {
-      const a = this._a;
-      const acts = [];
-      const empty = this._id('button', 'start_auto_empty');
-      if (empty) {
-        const busy = a.auto_empty_status && !/idle/i.test(a.auto_empty_status);
-        acts.push(`<button class="tile ${busy ? 'on' : ''}" data-a="press" data-e="${empty}" ${busy ? 'disabled' : ''}>${ic('mdi:delete-empty-outline')}${busy ? 'Emptying…' : 'Empty bin'}</button>`);
-      }
-      const wash = this._id('button', 'self_clean') || this._id('button', 'start_washing');
-      if (wash) acts.push(`<button class="tile ${a.washing ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${!!a.washing}">${ic('mdi:water-sync')}${a.washing ? 'Pause wash' : 'Wash mops'}</button>`);
-      const dry = this._id('button', 'manual_drying') || this._id('button', 'start_drying');
-      if (dry) acts.push(`<button class="tile ${a.drying ? 'on' : ''}" data-a="press" data-e="${a.drying && this._id('button', 'stop_drying') ? this._id('button', 'stop_drying') : dry}" aria-pressed="${!!a.drying}">${ic('mdi:heat-wave')}${a.drying ? 'Stop drying' : 'Dry mops'}</button>`);
-      return acts.length ? `<div class="grid3">${acts.join('')}</div>` : '';
-    }
-
-    _dockBlock(phone) {
-      const a = this._a;
-      const prog = a.drying ? num(a.drying_progress) : null;
-      return `<div class="stack" style="gap:14px">
-        <div class="between"><div class="grow"><h2 class="h">Dock</h2><div class="small muted" style="margin-top:2px">${esc(this._dockState())}</div></div>
-          ${this._ui.view === 'dock' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="dock">Dock settings</button>`}</div>
-        ${prog !== null ? `<div class="bar"><i style="width:${clamp(prog, 0, 100)}%"></i></div>` : ''}
-        ${this._levels()}
-        ${this._dockActions()}
-        ${phone ? `<button class="btn" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}Send robot to dock</button>` : ''}
-      </div>`;
-    }
-
-    _careBanner() {
-      const notes = this._notes();
-      if (!notes.length) return '';
-      const n = notes[0];
-      return `<button class="alert ${n.level === 'crit' ? 'crit' : ''}" data-a="pop" data-v="care">${ic(n.icon, `style="color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})"`)}
-        <span class="grow"><b style="font-weight:500;font-size:14px;display:block">${esc(n.title)}</b><span class="xs muted">${notes.length > 1 ? `+${notes.length - 1} more care ${notes.length === 2 ? 'alert' : 'alerts'}` : esc(n.desc)}</span></span>${ic('mdi:chevron-right')}</button>`;
-    }
-
-    _targets(cls = '') {
-      const t = this._ui.target;
-      const opts = [['all', 'All rooms'], ['rooms', 'Rooms'], ['zone', 'Zone'], ['spot', 'Spot']];
-      return `<div class="seg ${cls}" role="group" aria-label="What to clean">${opts.map(([id, l]) => `<button class="${t === id ? 'on' : ''}" aria-pressed="${t === id}" data-a="target" data-v="${id}" style="font-size:14px">${l}</button>`).join('')}</div>`;
-    }
-
-    _chips(wrap) {
-      const sel = this._ui.sel;
-      const rooms = this._rooms();
-      if (!rooms.length) return '<span class="small muted">No rooms found on this map.</span>';
-      return `<div class="chips ${wrap ? 'wrap' : ''}">${rooms.map((r) => {
-        const i = sel.indexOf(r.id);
-        return `<button class="chip ${i >= 0 ? 'on' : ''}" aria-pressed="${i >= 0}" data-a="room" data-v="${r.id}">${i >= 0 ? `${i + 1} · ` : ''}${esc(r.name)}</button>`;
-      }).join('')}</div>`;
-    }
-
-    _hint() {
-      const u = this._ui;
-      if (u.target === 'all') return 'Cleans every room on this map';
-      if (u.target === 'zone') {
-        if (!u.zone) return 'Drag on the map to draw a zone';
-        const w = Math.abs(u.zone[2] - u.zone[0]) / 1000, h = Math.abs(u.zone[3] - u.zone[1]) / 1000;
-        return `Zone ${w.toFixed(1)} × ${h.toFixed(1)} m<button data-a="clearsel">Clear</button>`;
-      }
-      if (u.target === 'spot') return u.spot ? 'Spot placed · tap elsewhere to move it<button data-a="clearsel">Clear</button>' : 'Tap the map to place a spot';
-      return '';
-    }
-
-    _mapTop() {
-      const sm = this._select('selected_map');
-      let floor = '';
-      if (sm && sm.options.length > 1) floor = `<label class="mpill">${ic('mdi:layers-outline')}<select data-a="optsel" data-e="${sm.id}" aria-label="Floor">${sm.options.map((o) => `<option ${o === sm.value ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
-      else if (this._a.selected_map) floor = `<span class="mpill">${ic('mdi:layers-outline')}${esc(this._a.selected_map)}</span>`;
-      return `${floor}<span></span>`;
-    }
-
-    _mapBottom() {
-      const u = this._ui;
-      const chips = u.target === 'rooms' ? `<div style="max-width:min(780px,100%)">${this._chips(true)}</div>` : `<span class="hint">${this._hint()}</span>`;
-      return `${chips}${this._targets('float')}`;
-    }
-
-    _overlay() {
-      if (this._ui.view !== 'clean' || !this._nat || !this._calib()) return '';
-      const u = this._ui;
-      let html = '';
-      if (u.target === 'rooms') {
-        const rooms = this._rooms();
-        u.sel.forEach((id, i) => {
-          const r = rooms.find((x) => x.id === id);
-          if (!r || r.x === undefined) return;
-          const p = this._pctPos(r.x, r.y);
-          html += `<button class="pill" style="left:${p.l}%;top:${p.t}%" data-a="room" data-v="${r.id}" aria-label="Deselect ${esc(r.name)}"><b>${i + 1}</b>${esc(r.name)}</button>`;
-        });
-      }
-      if (u.target === 'zone' && u.zone) html += this._zoneBox(u.zone);
-      if (u.target === 'spot' && u.spot) {
-        const p = this._pctPos(u.spot[0], u.spot[1]);
-        html += `<div class="spt" style="left:${p.l}%;top:${p.t}%"></div>`;
-      }
-      html += '<div class="zbox" data-live hidden></div>';
-      return html;
-    }
-
-    _zoneBox(z) {
-      const p0 = this._pctPos(z[0], z[1]), p1 = this._pctPos(z[2], z[3]);
-      const l = Math.min(p0.l, p1.l), t = Math.min(p0.t, p1.t);
-      const w = Math.abs(p1.l - p0.l), h = Math.abs(p1.t - p0.t);
-      const mw = Math.abs(z[2] - z[0]) / 1000, mh = Math.abs(z[3] - z[1]) / 1000;
-      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${mw.toFixed(1)} × ${mh.toFixed(1)} m · ${this._ui.passes}×</span></div>`;
-    }
-
-    _pop() {
-      const p = this._ui.pop;
-      if (!p) return '';
-      if (p === 'menu') {
-        return `<button class="scrim" data-a="closepop" aria-label="Close menu"></button>
-          <div class="popover menu" role="menu" style="top:70px">${this._views().filter(([id]) => id !== 'clean').map(([id, l, i]) => `<button role="menuitem" data-a="view" data-v="${id}">${ic(i)}${l}${id === 'care' && this._notes().length ? `<span class="badge" style="position:static;margin-left:auto">${this._notes().length}</span>` : ''}</button>`).join('')}</div>`;
-      }
-      const notes = this._notes();
-      const all = this._notes(true);
-      const snoozed = all.length - notes.length;
-      return `<button class="scrim" data-a="closepop" aria-label="Close care alerts"></button>
-        <section class="popover" role="dialog" aria-label="Care alerts">
-          <div class="between" style="padding:8px 16px"><span class="h">Care</span><button class="link" data-a="view" data-v="care">All parts</button></div>
-          ${notes.map((n) => `<div class="note ${n.level === 'crit' ? 'crit' : ''}"><span class="nic">${ic(n.icon)}</span><div class="grow">
-              <div style="font-size:14px;font-weight:500">${esc(n.title)}</div><div class="small muted" style="margin-top:2px">${esc(n.desc)}</div>
-              <div class="rowf" style="margin-top:10px;flex-wrap:wrap">${n.action ? `<button class="btn sm" data-a="${n.action.a}" ${n.action.e ? `data-e="${n.action.e}"` : ''} ${n.action.v ? `data-v="${n.action.v}"` : ''}>${esc(n.action.label)}</button>` : ''}
-              <button class="btn sm ghost" data-a="snooze" data-v="${n.id}">Remind me tomorrow</button></div></div></div>`).join('')}
-          ${!notes.length ? '<div class="note"><span class="small muted">All parts are in good shape.</span></div>' : ''}
-          ${snoozed ? `<div class="note"><span class="xs muted grow">${snoozed} snoozed until tomorrow</span><button class="btn sm ghost" data-a="unsnooze">Show</button></div>` : ''}
-        </section>`;
-    }
-
-    /* phone */
-    _phoneTop() {
-      const s = this._status();
-      const bat = this._battery();
-      const n = this._notes().length;
-      const nav = `${this._config.back_path ? `<button class="fab" data-a="nav" data-v="back" aria-label="Back">${ic('mdi:arrow-left')}</button>` : ''}${this._config.show_menu ? `<button class="fab" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}`;
-      return `${nav}<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
-          <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
-          <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
-        <button class="fab ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts, ${n} new">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>
-        <button class="fab ${this._ui.pop === 'menu' ? 'on' : ''}" data-a="pop" data-v="menu" aria-label="More">${ic('mdi:dots-vertical')}</button>`;
-    }
-
-    _toast() {
-      if (this._ui.pop) return '';
-      const notes = this._notes();
-      if (!notes.length) return '';
-      const n = notes[0];
-      return `<button class="toast ${n.level === 'crit' ? 'crit' : ''}" data-a="pop" data-v="care">${ic(n.icon, `style="--mdc-icon-size:18px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})"`)}
-        <span class="grow ell"><b style="font-weight:500">${esc(n.title)}</b>${notes.length > 1 ? `<span class="muted"> · +${notes.length - 1} more</span>` : ''}</span><span style="font-weight:500;padding:0 8px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})">View</span></button>`;
-    }
-
-    _summary() {
-      const parts = [];
-      const lab = (sel) => (sel ? this._opt(sel.so, sel.value) : '');
-      const m = this._select('cleaning_mode'); if (m) parts.push(lab(m));
-      const g = this._select('cleangenius');
-      if (g && !/^off$/i.test(g.value)) parts.push(`CleanGenius ${lab(g)}`);
-      else {
-        const su = this._select('suction_level'); if (su) parts.push(lab(su));
-        const hu = this._select('mop_pad_humidity') || this._select('water_volume'); if (hu) parts.push(this._opt(hu.so, hu.value, false));
-      }
-      if (this._ui.target !== 'all') parts.push(`${this._ui.passes}×`);
-      return parts.join(' · ');
-    }
-
-    _sheet() {
-      const u = this._ui;
-      const dockTab = u.sheetTab === 'dock';
-      const dockShort = this._a.washing || this._a.drying || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready';
-      const tabs = `<div class="grab"></div><div class="stabs" role="tablist">
-        <button role="tab" class="${!dockTab ? 'on' : ''}" aria-selected="${!dockTab}" data-a="sheettab" data-v="clean">${ic('mdi:robot-vacuum')}Clean</button>
-        <button role="tab" class="${dockTab ? 'on' : ''}" aria-selected="${dockTab}" data-a="sheettab" data-v="dock">${ic('mdi:home-lightning-bolt-outline')}Dock<span class="xs muted" style="font-weight:400">· ${dockShort}</span></button></div>`;
-      if (dockTab) return tabs + this._dockBlock(true);
-      const body = [this._targets()];
-      if (u.target === 'rooms') body.push(this._chips(false));
-      else body.push(`<div class="small muted" style="min-height:24px;display:flex;align-items:center;gap:8px">${this._hint().replace(/<button/g, '<button class="link"')}</div>`);
-      if (u.sheetOpen) body.push(`<div class="stack" style="gap:14px">${this._cleaningControls()}</div><button class="btn sm ghost" data-a="sheet" style="align-self:center">${ic('mdi:chevron-down')}Done</button>`);
-      else body.push(`<button class="summary" data-a="sheet">${ic('mdi:tune-variant', 'style="color:var(--dv-pt)"')}<span class="grow ell">${esc(this._summary())}</span><span style="font-size:13px;font-weight:500;color:var(--dv-pt)">Adjust</span></button>`);
-      body.push(`<div class="rowf">${this._runButton('btn pri', 'style="flex:1;min-height:52px;border-radius:26px;font-size:16px"')}
-        <button class="btn sq" style="min-height:52px;width:52px;border-radius:26px" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
-        <button class="btn sq" style="min-height:52px;width:52px;border-radius:26px" data-a="svc" data-v="return_to_base" aria-label="Send to dock">${ic('mdi:home-import-outline')}</button></div>`);
-      return tabs + body.join('');
-    }
-
-    _phoneHead() {
-      const v = this._views().find((x) => x[0] === this._ui.view);
-      return `<button class="ibtn" data-a="view" data-v="clean" aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow" style="font-size:18px">${esc(v ? v[1] : '')}</h1>
-        <button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
-    }
-
-    /* ---------- full views ---------- */
-    _viewBody() {
-      switch (this._ui.view) {
-        case 'dock': return this._dockView();
-        case 'care': return this._careView();
-        case 'settings': return this._settingsView();
-        case 'history': return this._historyView();
-        case 'remote': return this._remoteView();
-        default: return '';
-      }
-    }
-
-    _viewHead(title, sub) {
-      if (this._layout() === 'phone') return '';
-      return `<div class="vh"><div><h1 class="h-xl">${esc(title)}</h1>${sub ? `<div class="small muted" style="margin-top:2px">${esc(sub)}</div>` : ''}</div></div>`;
-    }
-
-    _control(id, labelOverride) {
-      const s = this._hass.states[id];
-      if (!s) return '';
-      const d = id.split('.')[0];
-      const name = esc(labelOverride || this._name(id));
-      const off = d === 'button' ? s.state === 'unavailable' : OFF_STATES.includes(s.state);
-      if (d === 'switch') {
-        return `<div class="row"><span class="name">${name}</span><button class="sw" role="switch" aria-checked="${s.state === 'on'}" aria-label="${name}" data-a="toggle" data-e="${id}" ${off ? 'disabled' : ''}></button></div>`;
-      }
-      if (d === 'select') {
-        const opts = s.attributes.options || [];
-        const labels = opts.map((o) => this._opt(s, o));
-        const short = !off && opts.length <= 4 && labels.join('').length <= 34;
-        if (short) return `<div class="row"><span class="name">${name}</span><div class="seg" role="group" aria-label="${name}">${opts.map((o, i) => `<button class="${o === s.state ? 'on' : ''}" aria-pressed="${o === s.state}" data-a="opt" data-e="${id}" data-v="${esc(o)}">${esc(labels[i])}</button>`).join('')}</div></div>`;
-        return `<div class="row"><span class="name">${name}</span><select class="sel" data-a="optsel" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}>${off ? `<option>${esc(this._fmt(s))}</option>` : opts.map((o) => `<option value="${esc(o)}" ${o === s.state ? 'selected' : ''}>${esc(this._opt(s, o, false))}</option>`).join('')}</select></div>`;
-      }
-      if (d === 'number') {
-        const at = s.attributes;
-        const unit = at.unit_of_measurement || '';
-        return `<div class="row"><span class="name">${name}</span><label class="range"><input type="range" min="${at.min ?? 0}" max="${at.max ?? 100}" step="${at.step ?? 1}" value="${esc(s.state)}" data-a="num" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}><span>${esc(s.state)}${esc(unit)}</span></label></div>`;
-      }
-      if (d === 'time') {
-        return `<div class="row"><span class="name">${name}</span><input class="time" type="time" value="${esc(String(s.state).slice(0, 5))}" data-a="time" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}></div>`;
-      }
-      if (d === 'button') {
-        const key = id.split('.')[1];
-        const risky = DESTRUCTIVE.some((k) => key.endsWith(k));
-        return `<div class="row"><span class="name">${name}</span><button class="btn sm" data-a="press" data-e="${id}" ${risky ? 'data-confirm="1"' : ''} ${off ? 'disabled' : ''}>Run</button></div>`;
-      }
-      if (d === 'sensor' || d === 'binary_sensor') {
-        const u = s.attributes.unit_of_measurement || '';
-        return `<div class="row"><span class="name">${name}</span><span class="val">${esc(this._fmt(s))}${u && !this._hass.formatEntityState ? ` ${esc(u)}` : ''}</span></div>`;
-      }
-      return '';
-    }
-
-    _group(title, icon, ids) {
-      const rows = ids.map((id) => this._control(id)).filter(Boolean).join('');
-      if (!rows) return '';
-      return `<section class="panel grp"><div class="grp-h">${ic(icon)}<h2 class="h">${esc(title)}</h2></div>${rows}</section>`;
-    }
-
-    _keysFor(list, domains = ['switch', 'select', 'number', 'time']) {
-      const out = [];
-      for (const k of list) for (const d of domains) { const id = this._id(d, k); if (id && !out.includes(id)) out.push(id); }
-      return out;
-    }
-
-    _dockView() {
-      const a = this._a;
-      const lay = this._layout();
-      const ids = this._keysFor(DOCK_KEYS);
-      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'], ['button']);
-      return `${this._viewHead('Dock', this._dockState())}
-        <div style="display:grid;grid-template-columns:${lay === 'desktop' ? 'minmax(320px,420px) minmax(0,1fr)' : '1fr'};gap:12px;align-items:start">
-          <div class="stack"><section class="panel pad">${this._dockBlock(lay === 'phone')}</section>
-          ${a.drying ? `<section class="panel pad"><div class="between"><span class="h">Drying</span><span class="small muted">${num(a.drying_progress) ?? 0}%</span></div><div class="bar" style="margin-top:10px"><i style="width:${clamp(num(a.drying_progress) || 0, 0, 100)}%"></i></div></section>` : ''}
-          ${this._group('Dock tools', 'mdi:toolbox-outline', extraBtns)}</div>
-          <div class="cols">${this._group('Dock settings', 'mdi:home-lightning-bolt-outline', ids) || '<section class="panel pad muted">No dock settings found for this robot.</section>'}</div>
-        </div>`;
-    }
-
-    _careView() {
-      const parts = this._consumables();
-      const notes = this._notes();
-      const warn = Number(this._config.care_warning ?? 20), crit = Number(this._config.care_critical ?? 10);
-      const faults = notes.filter((n) => n.id.startsWith('fault_') || n.id === 'error');
-      const stat = (key, attr, label, fmt) => {
-        const s = this._live('sensor', key);
-        const raw = s ? s.state : this._a[attr];
-        if (raw === undefined || raw === null) return '';
-        return `<div class="stat"><div class="lbl">${label}</div><b>${esc(fmt ? fmt(raw, s) : raw)}</b></div>`;
-      };
-      const mins = (v, s) => {
-        const u = s?.attributes?.unit_of_measurement || 'min';
-        const n = num(v); if (n === null) return v;
-        if (/^min/.test(u)) return `${Math.round(n / 60).toLocaleString()} h`;
-        return `${n.toLocaleString()} ${u}`;
-      };
-      const stats = [
-        stat('total_cleaning_time', 'total_cleaning_time', 'Total cleaning time', mins),
-        stat('cleaning_count', 'cleaning_count', 'Cleanings', (v) => Number(v).toLocaleString()),
-        stat('total_cleaned_area', 'total_cleaned_area', 'Total area', (v, s) => `${Math.round(Number(v)).toLocaleString()} ${s?.attributes?.unit_of_measurement || 'm²'}`),
-        stat('first_cleaning_date', 'first_cleaning_date', 'First cleaning', (v) => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleDateString(); }),
-      ].join('');
-      return `${this._viewHead('Care', 'Parts, warnings and lifetime totals')}
-        <div class="stack">
-          ${faults.map((n) => `<div class="alert crit" style="cursor:default">${ic(n.icon, 'style="color:var(--dv-errt)"')}<span class="grow"><b style="font-weight:500;display:block">${esc(n.title)}</b><span class="xs muted">${esc(n.desc)}</span></span>${n.action ? `<button class="btn sm" data-a="${n.action.a}" data-e="${n.action.e || ''}">${esc(n.action.label)}</button>` : ''}</div>`).join('')}
-          <div class="parts">${parts.map((p) => {
-            const color = p.pct <= crit ? 'var(--dv-err)' : p.pct <= warn ? 'var(--dv-warn)' : 'var(--dv-p)';
-            const tcol = p.pct <= crit ? 'var(--dv-errt)' : p.pct <= warn ? 'var(--dv-warnt)' : 'var(--dv-text2)';
-            return `<section class="panel pad stack" style="gap:14px"><div class="rowf" style="gap:14px">
-              <div class="ring" style="background:conic-gradient(${color} ${p.pct}%, var(--dv-bg2) 0)" role="img" aria-label="${esc(p.name)} ${p.pct}%"><span>${p.pct}%</span></div>
-              <div class="grow"><h2 class="h" style="font-size:15px">${esc(p.name)}</h2><div class="small" style="margin-top:4px;color:${tcol}">${p.timeLeft !== null ? `${p.timeLeft} ${esc(p.unit)} left` : ''}</div></div></div>
-              <div class="between"><span class="xs muted">${ic(p.icon, 'style="--mdc-icon-size:16px;vertical-align:-3px"')}</span><button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="Reset ${esc(p.name)}">Reset</button></div></section>`;
-          }).join('') || '<section class="panel pad muted">No consumable data reported.</section>'}</div>
-          ${stats ? `<section class="panel pad stack"><h2 class="h">Lifetime</h2><div class="stats">${stats}</div></section>` : ''}
-        </div>`;
-    }
-
-    _settingsView() {
-      const used = new Set();
-      const groups = [];
-      const all = Object.entries(this._map).filter(([k]) => !k.includes('.room_'));
-      for (const [gid, title, icon, keys] of GROUPS) {
-        const ids = this._keysFor(keys);
-        ids.forEach((i) => used.add(i));
-        groups.push(this._group(title, icon, ids));
-      }
-      const skip = new Set([...CLEAN_KEYS, ...DOCK_KEYS]);
-      const other = all.filter(([k, id]) => {
-        const [d, key] = k.split('.');
-        return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(id) && !skip.has(key);
-      }).map(([, id]) => id);
-      groups.push(this._group('Other', 'mdi:dots-horizontal', other));
-      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k)).map(([, id]) => id);
-      groups.push(this._group('Actions', 'mdi:play-box-outline', actions));
-      groups.push(this._roomSettings());
-      return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}<div class="cols">${groups.filter(Boolean).join('')}</div>`;
-    }
-
-    _roomSettings() {
-      const rooms = this._rooms();
-      if (!rooms.length) return '';
-      const rid = this._ui.room ?? rooms[0].id;
-      const pre = `room_${rid}_`;
-      const ids = Object.entries(this._map).filter(([k]) => k.split('.')[1]?.startsWith(pre)).map(([, id]) => id);
-      if (!ids.length && !Object.keys(this._map).some((k) => k.includes('.room_'))) return '';
-      const rows = ids.map((id) => this._control(id, human(id.split('.')[1].split(pre)[1] || ''))).join('');
-      return `<section class="panel grp"><div class="grp-h">${ic('mdi:floor-plan')}<h2 class="h grow">Rooms</h2>
-        <select class="sel" data-a="setroom" aria-label="Room">${rooms.map((r) => `<option value="${r.id}" ${r.id === rid ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
-        ${rows || '<div class="row small muted">No per-room settings for this room.</div>'}</section>`;
-    }
-
-    _historyItems() {
-      const pics = this._cam?.attributes?.cleaning_history_picture || {};
-      return Object.entries(pics).map(([k, url]) => {
-        const m = k.match(/^\s*(\d+):\s*(.+?)\s+-\s+(.+?)(?:\s*\((.+)\))?$/);
-        return m ? { idx: Number(m[1]), when: m[2], title: m[3], status: m[4] || '', url } : { idx: 0, when: '', title: k, status: '', url };
-      });
-    }
-
-    _historyView() {
-      const items = this._historyItems();
-      const sel = items[this._ui.hist] || items[0];
-      const obs = Object.entries(this._cam?.attributes?.obstacle_picture || {});
-      const url = (u) => (this._hass.hassUrl ? this._hass.hassUrl(u) : u);
-      if (!items.length) return `${this._viewHead('History')}<section class="panel pad muted">No cleaning history reported yet.</section>`;
-      const list = items.map((it, i) => {
-        const on = it === sel;
-        const ok = /complete/i.test(it.status);
-        return `<button class="hitem ${on ? 'on' : ''}" aria-pressed="${on}" data-a="hist" data-v="${i}">
-          <span style="width:36px;height:36px;border-radius:50%;background:var(--dv-bg2);display:grid;place-items:center;flex-shrink:0;color:${ok ? 'var(--dv-pt)' : 'var(--dv-warnt)'}">${ic(/zone/i.test(it.title) ? 'mdi:selection-drag' : 'mdi:robot-vacuum')}</span>
-          <span class="grow"><span style="display:block;font-size:14px;font-weight:500">${esc(it.title)}</span><span class="xs muted">${esc(it.when)}</span></span>
-          <span class="xs" style="color:${ok ? 'var(--dv-text2)' : 'var(--dv-warnt)'}">${esc(it.status)}</span></button>`;
-      }).join('');
-      return `${this._viewHead('History', `${items.length} recent runs`)}
-        <div class="hist"><section class="panel hlist">${list}</section>
-          <section class="panel pad stack" style="min-height:0">
-            <div class="between"><div><h2 class="h">${esc(sel.title)}</h2><div class="small muted">${esc(sel.when)}</div></div><span class="small" style="color:${/complete/i.test(sel.status) ? 'var(--dv-ok)' : 'var(--dv-warnt)'}">${esc(sel.status)}</span></div>
-            <div class="himg" style="flex:1 1 auto"><img src="${esc(url(sel.url))}" alt="Map of the ${esc(sel.title)} run" loading="lazy"></div>
-            ${obs.length ? `<div class="stack-s"><span class="lbl">Obstacle photos</span><div class="obs">${obs.slice(0, 8).map(([k, u]) => `<figure><img src="${esc(url(u))}" alt="${esc(k)}" loading="lazy"><figcaption class="muted">${esc(k.replace(/^\d+:\s*/, '').replace(/%(\d+)/, '$1%'))}</figcaption></figure>`).join('')}</div></div>` : ''}
-          </section></div>`;
-    }
-
-    _remoteView() {
-      const sp = this._ui.speed;
-      return `<div class="stack" style="gap:18px">
-        <div><h1 class="h-xl">Remote control</h1><div class="small muted" style="margin-top:4px">Press and hold to drive. Obstacle sensors stay on.</div></div>
-        <div class="dpad" role="group" aria-label="Direction pad">
-          <button style="top:10px;left:calc(50% - 36px)" data-hold="fwd" aria-label="Forward">${ic('mdi:arrow-up-bold')}</button>
-          <button style="bottom:10px;left:calc(50% - 36px)" data-hold="back" aria-label="Backward">${ic('mdi:arrow-down-bold')}</button>
-          <button style="top:calc(50% - 36px);left:10px" data-hold="left" aria-label="Turn left">${ic('mdi:rotate-left')}</button>
-          <button style="top:calc(50% - 36px);right:10px" data-hold="right" aria-label="Turn right">${ic('mdi:rotate-right')}</button>
-          <button class="c" style="top:calc(50% - 36px);left:calc(50% - 36px)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
-        </div>
-        <div class="stack-s"><span class="lbl">Speed</span><div class="seg" role="group" aria-label="Speed">${[['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']].map(([id, l]) => `<button class="${sp === id ? 'on' : ''}" aria-pressed="${sp === id}" data-a="speed" data-v="${id}">${l}</button>`).join('')}</div></div>
-        <div class="rowf"><button class="btn" style="flex:1" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}Send to dock</button></div>
-      </div>`;
-    }
-
-    /* ---------- events ---------- */
-    _onClick(ev) {
-      const el = ev.target.closest('[data-a]');
-      if (!el || el.disabled) return;
-      const a = el.dataset.a;
-      const v = el.dataset.v;
-      const e = el.dataset.e;
-      const u = this._ui;
-      if (['optsel', 'num', 'time', 'setroom'].includes(a)) return; // handled on change
-      switch (a) {
-        case 'view': u.view = v; u.pop = null; break;
-        case 'target': u.target = v; break;
-        case 'room': {
-          const id = Number(v);
-          u.sel = u.sel.includes(id) ? u.sel.filter((x) => x !== id) : [...u.sel, id];
-          break;
-        }
-        case 'passes': u.passes = Number(v); break;
-        case 'clearsel': u.zone = null; u.spot = null; break;
-        case 'sheettab': u.sheetTab = v; break;
-        case 'sheet': u.sheetOpen = !u.sheetOpen; break;
         case 'nav':
-          if (v === 'back' && this._config.back_path) {
-            history.pushState(null, '', this._config.back_path);
-            window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false }, bubbles: true, composed: true }));
-          } else if (v === 'menu') {
-            this.dispatchEvent(new CustomEvent('hass-toggle-menu', { bubbles: true, composed: true }));
-          }
+          if (v === 'back') history.back();
+          else if (v === 'menu') this.dispatchEvent(new CustomEvent('hass-toggle-menu', { bubbles: true, composed: true }));
           break;
         case 'pop': u.pop = u.pop === v ? null : v; break;
         case 'closepop': u.pop = null; break;
