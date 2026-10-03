@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.2.0';
+  const VERSION = '0.2.1';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -404,6 +404,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     }
     get hass() { return this._hass; }
 
+    // HA sets preview=true while the dashboard is in edit mode (and in the card editor).
+    // Full screen steps aside then, so the page scrolls and the Edit button is reachable.
+    set preview(v) {
+      const on = !!v;
+      if (on === !!this._preview) return;
+      this._preview = on;
+      if (this._config) this._schedule();
+    }
+    get preview() { return !!this._preview; }
+
     getCardSize() { return 12; }
     getGridOptions() { return { columns: 'full', rows: 10, min_rows: 6, min_columns: 6 }; }
 
@@ -773,11 +783,13 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _fsWanted() {
       const fs = this._config?.fullscreen;
-      if (fs === false) return false;
+      if (fs === false || this._preview) return false;
+      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
+        if (/dialog|preview|hui-card-options|edit-mode/.test(n.localName)) return false;
+      }
       if (fs === 'force') return true;
       for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
         if (n.localName === 'hui-panel-view') return true;
-        if (/dialog|preview/.test(n.localName)) return false;
       }
       return false;
     }

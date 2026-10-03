@@ -106,7 +106,7 @@ More examples are in [`examples/`](examples).
 | `title` | device name | Name shown at the top of the card. |
 | `layout` | `auto` | `auto`, `desktop`, `tablet` or `phone`. `auto` picks a layout from the card's width. |
 | `height` | screen height | Any CSS height, for example `720px` or `100vh`. Used when the card is not in full-screen mode. |
-| `fullscreen` | `true` | In a panel view the card fills the visible screen and locks page scrolling. `false` turns this off; `force` turns it on even outside a panel view. |
+| `fullscreen` | `true` | In a panel view the card fills the visible screen and locks page scrolling. It steps aside while the dashboard is in edit mode so you can reach the Edit button. `false` turns this off; `force` turns it on even outside a panel view. |
 | `show_back` | `false` | Shows a back button (browser back). Useful in kiosk mode. |
 | `show_menu` | `false` | Shows a button that opens Home Assistant's sidebar. Useful in kiosk mode. |
 | `accent_color` | theme primary | Any CSS color, if you want the card to stand out from your theme. |

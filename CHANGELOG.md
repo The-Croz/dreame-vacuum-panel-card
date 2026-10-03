@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- **Edit mode.** Full-screen mode now steps aside while the dashboard is in edit mode, so
+  the page scrolls and the card's Edit button is reachable again.
+
 ## 0.2.0
 
 - **Phone layout fixes.** The bottom controls no longer run off screen, the banner no longer
