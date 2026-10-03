@@ -1279,6 +1279,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const d = id.split('.')[0];
       const name = esc(labelOverride || this._name(id));
       const off = d === 'button' ? s.state === 'unavailable' : OFF_STATES.includes(s.state);
+      if (d === 'button' && off) return ''; // this dock lacks the feature (e.g. water tank draining)
       if (d === 'switch') {
         return `<div class="row"><span class="name">${name}</span><button class="sw" role="switch" aria-checked="${s.state === 'on'}" aria-label="${name}" data-a="toggle" data-e="${id}" ${off ? 'disabled' : ''}></button></div>`;
       }
@@ -1292,7 +1293,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (d === 'number') {
         const at = s.attributes;
         const unit = at.unit_of_measurement || '';
-        return `<div class="row"><span class="name">${name}</span><label class="range"><input type="range" min="${at.min ?? 0}" max="${at.max ?? 100}" step="${at.step ?? 1}" value="${esc(s.state)}" data-a="num" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}><span>${esc(s.state)}${esc(unit)}</span></label></div>`;
+        return `<div class="row"><span class="name">${name}</span><label class="range"><input type="range" min="${at.min ?? 0}" max="${at.max ?? 100}" step="${at.step ?? 1}" value="${esc(s.state)}" data-a="num" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}><span>${esc(this._numLabel(s.state, unit))}</span></label></div>`;
       }
       if (d === 'time') {
         return `<div class="row"><span class="name">${name}</span><input class="time" type="time" value="${esc(String(s.state).slice(0, 5))}" data-a="time" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}></div>`;
@@ -1307,6 +1308,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return `<div class="row"><span class="name">${name}</span><span class="val">${esc(this._fmt(s))}${u && !this._hass.formatEntityState ? ` ${esc(u)}` : ''}</span></div>`;
       }
       return '';
+    }
+
+    /* HA converts sensor units to the user's unit system, but number entities keep the
+       integration's native unit. Convert area for display only; the slider stays native. */
+    _numLabel(v, unit) {
+      const us = this._hass.config?.unit_system;
+      if (unit === 'm²' && (us?.area === 'ft²' || us?.length === 'mi')) return `${Math.round(Number(v) * 10.7639)} ft²`;
+      return `${v}${unit}`;
     }
 
     _group(title, icon, ids) {
