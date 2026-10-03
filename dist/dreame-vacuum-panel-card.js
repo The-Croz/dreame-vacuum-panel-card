@@ -423,6 +423,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       }
       this._ro.observe(this);
       this._onWin = this._onWin || (() => this._applyFs());
+      // A held drive button must never outlive the page: stop if it is hidden, blurred or unloaded.
+      this._onHide = this._onHide || (() => this._stopHold());
+      document.addEventListener('visibilitychange', this._onHide);
+      window.addEventListener('blur', this._onHide);
+      window.addEventListener('pagehide', this._onHide);
       window.addEventListener('resize', this._onWin);
       window.visualViewport && window.visualViewport.addEventListener('resize', this._onWin);
       this._schedule();
@@ -431,6 +436,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     }
 
     disconnectedCallback() {
+      document.removeEventListener('visibilitychange', this._onHide);
+      window.removeEventListener('blur', this._onHide);
+      window.removeEventListener('pagehide', this._onHide);
       window.removeEventListener('resize', this._onWin);
       window.visualViewport && window.visualViewport.removeEventListener('resize', this._onWin);
       clearTimeout(this._hTimer);
