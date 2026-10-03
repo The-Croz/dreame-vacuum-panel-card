@@ -1715,7 +1715,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return this._call('dreame_vacuum', 'vacuum_clean_zone', { entity_id: ent, zone: [u.zone], repeats: u.passes });
       }
       if (u.target === 'spot' && u.spot) {
-        return this._call('dreame_vacuum', 'vacuum_clean_spot', { entity_id: ent, points: [u.spot], repeats: u.passes });
+        // The robot accepts vacuum_clean_spot but aborts and returns to the dock (seen on Beep-0,
+        // firmware 1639), so spot cleaning is sent as a small zone clean (about 1.2 m square, the
+        // same ~1.5 m2 patch a native spot cleans), which this robot runs reliably.
+        const half = 600;
+        const zone = [u.spot[0] - half, u.spot[1] - half, u.spot[0] + half, u.spot[1] + half];
+        return this._call('dreame_vacuum', 'vacuum_clean_zone', { entity_id: ent, zone: [zone], repeats: u.passes });
       }
       if (u.target === 'all') return this._call('vacuum', 'start', { entity_id: ent });
       return null;
