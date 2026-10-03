@@ -1201,7 +1201,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (u.target === 'zone') {
         if (!u.zone) return 'Drag on the map to draw a zone';
         const w = Math.abs(u.zone[2] - u.zone[0]) / 1000, h = Math.abs(u.zone[3] - u.zone[1]) / 1000;
-        return `Zone ${w.toFixed(1)} × ${h.toFixed(1)} m<button data-a="clearsel">Clear</button>`;
+        return `Zone ${this._dim(w, h)}<button data-a="clearsel">Clear</button>`;
       }
       if (u.target === 'spot') return u.spot ? 'Spot placed · tap elsewhere to move it<button data-a="clearsel">Clear</button>' : 'Tap the map to place a spot';
       return '';
@@ -1243,12 +1243,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return html;
     }
 
+    /** Zone size in the user's unit system (map coordinates are millimetres). */
+    _dim(wm, hm) {
+      const us = this._hass.config?.unit_system;
+      if (us?.length === 'mi' || us?.area === 'ft²') return `${(wm * 3.28084).toFixed(1)} × ${(hm * 3.28084).toFixed(1)} ft`;
+      return `${wm.toFixed(1)} × ${hm.toFixed(1)} m`;
+    }
+
     _zoneBox(z) {
       const p0 = this._pctPos(z[0], z[1]), p1 = this._pctPos(z[2], z[3]);
       const l = Math.min(p0.l, p1.l), t = Math.min(p0.t, p1.t);
       const w = Math.abs(p1.l - p0.l), h = Math.abs(p1.t - p0.t);
       const mw = Math.abs(z[2] - z[0]) / 1000, mh = Math.abs(z[3] - z[1]) / 1000;
-      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${mw.toFixed(1)} × ${mh.toFixed(1)} m · ${this._ui.passes}×</span></div>`;
+      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${this._dim(mw, mh)} · ${this._ui.passes}×</span></div>`;
     }
 
     _pop() {
