@@ -1,3 +1,6 @@
 # Local test harness: contains real room names and map data
 test/
 node_modules/
+
+# Session handoff notes (private)
+HANDOFF*.md
