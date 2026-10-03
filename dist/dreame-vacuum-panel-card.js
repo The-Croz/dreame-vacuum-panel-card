@@ -1663,7 +1663,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._stopHold();
       const dir = btn.dataset.hold;
       const vel = { slow: 100, normal: 200, fast: 300 }[this._ui.speed] || 200;
-      const cmd = { fwd: [0, vel], back: [0, -vel], left: [64, 0], right: [-64, 0] }[dir];
+      // rotation is an angular speed (spdw), so turns scale with the speed setting and stay gentle
+      const rot = { slow: 20, normal: 32, fast: 48 }[this._ui.speed] || 32;
+      const cmd = { fwd: [0, vel], back: [0, -vel], left: [rot, 0], right: [-rot, 0] }[dir];
       if (!cmd) return;
       btn.classList.add('held');
       const hold = { btn, dead: false, t: null };
