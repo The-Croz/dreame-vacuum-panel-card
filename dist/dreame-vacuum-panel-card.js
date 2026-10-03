@@ -731,13 +731,34 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return Math.floor(vh - top);
     }
 
+    _scrollOverflow() {
+      let max = 0;
+      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
+        const root = n === document.documentElement;
+        if (!root) {
+          const oy = getComputedStyle(n).overflowY;
+          if (oy !== 'auto' && oy !== 'scroll' && oy !== 'overlay') continue;
+        }
+        const el = root ? (document.scrollingElement || n) : n;
+        max = Math.max(max, el.scrollHeight - el.clientHeight);
+      }
+      return max;
+    }
+
     _applyHeight() {
       if (this._config?.height) return;
       const card = this.shadowRoot.querySelector('ha-card.dv');
       if (!card || !this.isConnected) return;
-      const h = `${Math.max(480, this._availHeight())}px`;
-      if (card.style.getPropertyValue('--dv-h') !== h) {
-        card.style.setProperty('--dv-h', h);
+      let px = Math.max(480, this._availHeight());
+      // The viewport maths can miss padding or safe-area insets HA adds around the view.
+      // Ask the browser: if an ancestor still scrolls with our height applied, trim the excess.
+      card.style.setProperty('--dv-h', `${px}px`);
+      const over = this._scrollOverflow();
+      if (over > 0) px = Math.max(480, px - over);
+      const h = `${px}px`;
+      card.style.setProperty('--dv-h', h);
+      if (this._lastH !== h) {
+        this._lastH = h;
         this._fit();
       }
     }
