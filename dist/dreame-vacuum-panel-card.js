@@ -252,8 +252,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .obs figure{margin:0;display:flex;flex-direction:column;gap:6px;font-size:12px}
 .obs img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:var(--dv-bg2)}
 /* remote */
-.dpad{position:relative;width:280px;height:280px;border-radius:50%;background:var(--dv-bg2);align-self:center;flex-shrink:0;touch-action:none}
-.dpad button{position:absolute;width:72px;height:72px;border-radius:50%;border:0;background:var(--dv-bg);color:var(--dv-text);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 1px var(--dv-div),0 2px 6px rgba(0,0,0,.08);user-select:none;-webkit-user-select:none}
+.dpad{--b:72px;position:relative;width:280px;height:280px;border-radius:50%;background:var(--dv-bg2);align-self:center;flex-shrink:0;touch-action:none}
+.dpad button{position:absolute;width:var(--b);height:var(--b);border-radius:50%;border:0;background:var(--dv-bg);color:var(--dv-text);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 1px var(--dv-div),0 2px 6px rgba(0,0,0,.08);user-select:none;-webkit-user-select:none}
 .dpad button:active,.dpad button.held{background:var(--dv-tint);color:var(--dv-pt)}
 .dpad button ha-icon{--mdc-icon-size:30px}
 .dpad .c{background:var(--dv-pbtn);color:#fff}
@@ -308,8 +308,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .ph-head{display:flex;align-items:center;gap:4px;padding:8px 8px 8px 4px;min-height:60px;background:var(--dv-bg);border-bottom:1px solid var(--dv-div);flex-shrink:0}
 .ph.v .view{flex:1 1 auto;padding:12px}
 .ph .hist{grid-template-columns:1fr;height:auto}
-.ph .dpad{width:250px;height:250px}
-.ph .dpad button{width:64px;height:64px}
+.ph .dpad{--b:64px;width:250px;height:250px}
 @media (prefers-reduced-motion:reduce){.sw::after{transition:none}}
 `;
 
@@ -1527,11 +1526,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `<div class="stack" style="gap:18px">
         <div><h1 class="h-xl">Remote control</h1><div class="small muted" style="margin-top:4px">Press and hold to drive. Obstacle sensors stay on.</div></div>
         <div class="dpad" role="group" aria-label="Direction pad">
-          <button style="top:10px;left:calc(50% - 36px)" data-hold="fwd" aria-label="Forward">${ic('mdi:arrow-up-bold')}</button>
-          <button style="bottom:10px;left:calc(50% - 36px)" data-hold="back" aria-label="Backward">${ic('mdi:arrow-down-bold')}</button>
-          <button style="top:calc(50% - 36px);left:10px" data-hold="left" aria-label="Turn left">${ic('mdi:rotate-left')}</button>
-          <button style="top:calc(50% - 36px);right:10px" data-hold="right" aria-label="Turn right">${ic('mdi:rotate-right')}</button>
-          <button class="c" style="top:calc(50% - 36px);left:calc(50% - 36px)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
+          <button style="top:10px;left:calc(50% - var(--b) / 2)" data-hold="fwd" aria-label="Forward">${ic('mdi:arrow-up-bold')}</button>
+          <button style="bottom:10px;left:calc(50% - var(--b) / 2)" data-hold="back" aria-label="Backward">${ic('mdi:arrow-down-bold')}</button>
+          <button style="top:calc(50% - var(--b) / 2);left:10px" data-hold="left" aria-label="Turn left">${ic('mdi:rotate-left')}</button>
+          <button style="top:calc(50% - var(--b) / 2);right:10px" data-hold="right" aria-label="Turn right">${ic('mdi:rotate-right')}</button>
+          <button class="c" style="top:calc(50% - var(--b) / 2);left:calc(50% - var(--b) / 2)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
         </div>
         <div class="stack-s"><span class="lbl">Speed</span><div class="seg" role="group" aria-label="Speed">${[['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']].map(([id, l]) => `<button class="${sp === id ? 'on' : ''}" aria-pressed="${sp === id}" data-a="speed" data-v="${id}">${l}</button>`).join('')}</div></div>
         <div class="rowf"><button class="btn" style="flex:1" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}Send to dock</button></div>
