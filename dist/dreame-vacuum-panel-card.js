@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -271,6 +271,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .rail button:hover{background:var(--dv-bg2);color:var(--dv-text)}
 .rail button.on{background:var(--dv-tint);color:var(--dv-pt)}
 .rail .badge{top:4px;right:12px}
+.rail .hanav{display:flex;flex-direction:column;align-items:center;gap:2px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--dv-div);flex-shrink:0}
+.rail .hanav .hab,.tabs .hanav .hab{width:44px;min-height:44px;height:44px;border-radius:50%;gap:0;flex:0 0 auto}
+.tabs .hanav{display:flex;align-items:center;gap:2px;padding-right:6px;margin-right:4px;border-right:1px solid var(--dv-div);flex-shrink:0}
+.tabs .hanav .hab:hover{background:var(--dv-bg2);color:var(--dv-text)}
 .view{overflow:auto;min-height:0;min-width:0}
 .desk.v .view{display:flex;flex-direction:column}
 .desk.v .hist{flex:1 1 auto;height:auto}
@@ -936,8 +940,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         const badge = id === 'care' && n ? `<span class="badge">${n}</span>` : '';
         return `<button class="${on ? 'on' : ''}" data-a="view" data-v="${id}" ${on ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label}</span>${badge}</button>`;
       }).join('');
-      if (lay === 'desktop') return `<div class="me" title="${esc(this._title())}">${ic('mdi:robot-vacuum')}</div>${items}`;
-      return items;
+      const ha = this._haNav();
+      if (lay === 'desktop') return `${ha ? `<div class="hanav">${ha}</div>` : ''}<div class="me" title="${esc(this._title())}">${ic('mdi:robot-vacuum')}</div>${items}`;
+      return ha ? `<div class="hanav">${ha}</div>${items}` : items;
+    }
+
+    // Back / HA-menu buttons for kiosk mode (HA header hidden). Shared by every layout.
+    _haNav(cls = 'hab') {
+      const c = this._config;
+      return `${c.show_back ? `<button class="${cls}" data-a="nav" data-v="back" aria-label="Back">${ic('mdi:arrow-left')}</button>` : ''}${c.show_menu ? `<button class="${cls}" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}`;
     }
 
     _battery() {
@@ -1285,7 +1296,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const s = this._status();
       const bat = this._battery();
       const n = this._notes().length;
-      const nav = `${this._config.show_back ? `<button class="fab" data-a="nav" data-v="back" aria-label="Back">${ic('mdi:arrow-left')}</button>` : ''}${this._config.show_menu ? `<button class="fab" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}`;
+      const nav = this._haNav('fab');
       return `${nav}<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
           <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
           <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
@@ -1339,7 +1350,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _phoneHead() {
       const v = this._views().find((x) => x[0] === this._ui.view);
       return `<button class="ibtn" data-a="view" data-v="clean" aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow" style="font-size:18px">${esc(v ? v[1] : '')}</h1>
-        <button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
+        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}<button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
     }
 
     /* ---------- full views ---------- */
@@ -1483,7 +1494,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(id) && !skip.has(key);
       }).map(([, id]) => id);
       groups.push(this._group('Other', 'mdi:dots-horizontal', other));
-      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k)).map(([, id]) => id);
+      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k) && (k !== 'button.water_tank_draining' || this._config.show_water_tank_draining)).map(([, id]) => id);
       groups.push(this._group('Actions', 'mdi:play-box-outline', actions));
       groups.push(this._roomSettings());
       return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}<div class="cols">${groups.filter(Boolean).join('')}</div>`;
