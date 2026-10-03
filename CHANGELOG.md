@@ -5,7 +5,8 @@
 - **Phone layout fixes.** The bottom controls no longer run off screen, the banner no longer
   hides behind the top bar, and the toolbar no longer overlaps Home Assistant's header.
 - **Full-screen mode** (`fullscreen`). In panel views the card pins itself to the visible
-  screen, locks page scrolling and keeps its size steady while it redraws.
+  screen, locks page scrolling and keeps its size steady while it redraws. It turns itself
+  off while the dashboard is in edit mode, so the card's Edit button stays reachable.
 - **Kiosk mode buttons** (`show_back`, `show_menu`) in the phone, tablet and desktop layouts.
 - **Suction** shown as Quiet, Standard, Turbo, Max. **Wetness** is a 1–32 slider that uses the
   robot's own bands.
