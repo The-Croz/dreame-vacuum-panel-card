@@ -99,7 +99,7 @@ ha-card.dv{
   --dv-errbg:color-mix(in srgb,var(--dv-err) 13%,var(--dv-bg));
   --dv-r:var(--ha-card-border-radius,12px);
   --dv-mapbg:var(--dv-bg2);
-  height:var(--dv-h);min-height:480px;position:relative;overflow:hidden;
+  height:var(--dv-h);min-height:480px;position:relative;overflow:hidden;isolation:isolate;
   background:var(--dv-page);color:var(--dv-text);
   font-family:var(--ha-font-family-body,Roboto,'Helvetica Neue',system-ui,sans-serif);
   -webkit-font-smoothing:antialiased;
@@ -202,6 +202,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .menu button{display:flex;align-items:center;gap:14px;width:100%;min-height:52px;border:0;background:none;padding:0 18px;font-size:15px;cursor:pointer;text-align:left}
 .menu button:hover{background:var(--dv-bg2)}
 .toast{position:absolute;left:12px;right:12px;z-index:3;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 8px 0 14px;border-radius:22px;border:0;background:var(--dv-warnbg);color:var(--dv-text);font-size:13px;cursor:pointer;text-align:left;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.ph .toast{bottom:calc(var(--sheet-h,300px) + 2px)}
 .toast.crit{background:var(--dv-errbg)}
 .alert{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--dv-warnbg);border:0;width:100%;text-align:left;cursor:pointer;color:var(--dv-text)}
 .alert.crit{background:var(--dv-errbg)}
@@ -330,6 +331,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const labels = {
         entity: 'Vacuum', map_entity: 'Map camera (optional)', title: 'Title (optional)', layout: 'Layout',
         height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', default_target: 'Default cleaning target',
+        back_path: 'Back button path (e.g. /dashboard-home)', show_menu: 'Show HA menu button',
         care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)',
       };
       return {
@@ -344,6 +346,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
               { name: 'default_target', selector: { select: { mode: 'dropdown', options: [{ value: 'all', label: 'All rooms' }, { value: 'rooms', label: 'Rooms' }] } } },
               { name: 'height', selector: { text: {} } },
               { name: 'accent_color', selector: { text: {} } },
+              { name: 'back_path', selector: { text: {} } },
+              { name: 'show_menu', selector: { boolean: {} } },
               { name: 'care_warning', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
               { name: 'care_critical', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
             ],
@@ -400,10 +404,18 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         });
       }
       this._ro.observe(this);
+      this._onWin = this._onWin || (() => this._applyHeight());
+      window.addEventListener('resize', this._onWin);
+      window.visualViewport && window.visualViewport.addEventListener('resize', this._onWin);
       this._schedule();
+      // HA lays out its header after the card connects, so measure again once it settles.
+      this._hTimer = setTimeout(this._onWin, 400);
     }
 
     disconnectedCallback() {
+      window.removeEventListener('resize', this._onWin);
+      window.visualViewport && window.visualViewport.removeEventListener('resize', this._onWin);
+      clearTimeout(this._hTimer);
       this._ro && this._ro.disconnect();
       this._sheetRO && this._sheetRO.disconnect();
       this._stopHold();
@@ -676,7 +688,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (key !== this._shellKey) {
         this._shellKey = key;
         this._regions = {};
-        const h = this._config.height || 'calc(100vh - var(--header-height, 56px) - 16px)';
+        const h = this._config.height || `${Math.max(480, this._availHeight())}px`;
         const accent = this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '';
         root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}" style="--dv-h:${esc(h)};${accent}">${this._shell(lay, view)}</ha-card>`;
         const img = root.querySelector('[data-img]');
@@ -697,6 +709,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           this._sheetRO.observe(sheet);
         }
       }
+      this._applyHeight();
       this._renderRegions();
       const img = root.querySelector('[data-img]');
       const url = this._imgUrl();
@@ -707,6 +720,28 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._fit();
     }
 
+    /* Height available below the card's own top edge, measured against the real
+       visible viewport. Summing scrollTop up the composed tree recovers the card's
+       position at scroll 0, so HA headers, tab bars, kiosk mode and iOS toolbars
+       are all accounted for without hard-coding any of them. */
+    _availHeight() {
+      let top = this.getBoundingClientRect().top;
+      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) top += n.scrollTop || 0;
+      const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      return Math.floor(vh - top);
+    }
+
+    _applyHeight() {
+      if (this._config?.height) return;
+      const card = this.shadowRoot.querySelector('ha-card.dv');
+      if (!card || !this.isConnected) return;
+      const h = `${Math.max(480, this._availHeight())}px`;
+      if (card.style.getPropertyValue('--dv-h') !== h) {
+        card.style.setProperty('--dv-h', h);
+        this._fit();
+      }
+    }
+
     _placeSheet() {
       const root = this.shadowRoot;
       const sheet = root.querySelector('.sheet');
@@ -714,8 +749,6 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!sheet || !ph) return;
       const hgt = sheet.offsetHeight;
       ph.style.setProperty('--sheet-h', `${hgt + 8}px`);
-      const toast = root.querySelector('.toast');
-      if (toast) toast.style.bottom = `${hgt + 10}px`;
       this._fit();
     }
 
@@ -1133,7 +1166,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const s = this._status();
       const bat = this._battery();
       const n = this._notes().length;
-      return `<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
+      const nav = `${this._config.back_path ? `<button class="fab" data-a="nav" data-v="back" aria-label="Back">${ic('mdi:arrow-left')}</button>` : ''}${this._config.show_menu ? `<button class="fab" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}`;
+      return `${nav}<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
           <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
           <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
         <button class="fab ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts, ${n} new">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>
@@ -1407,6 +1441,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         case 'clearsel': u.zone = null; u.spot = null; break;
         case 'sheettab': u.sheetTab = v; break;
         case 'sheet': u.sheetOpen = !u.sheetOpen; break;
+        case 'nav':
+          if (v === 'back' && this._config.back_path) {
+            history.pushState(null, '', this._config.back_path);
+            window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false }, bubbles: true, composed: true }));
+          } else if (v === 'menu') {
+            this.dispatchEvent(new CustomEvent('hass-toggle-menu', { bubbles: true, composed: true }));
+          }
+          break;
         case 'pop': u.pop = u.pop === v ? null : v; break;
         case 'closepop': u.pop = null; break;
         case 'hist': u.hist = Number(v); break;
