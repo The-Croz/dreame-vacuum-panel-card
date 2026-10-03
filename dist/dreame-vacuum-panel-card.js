@@ -32,6 +32,9 @@
     in_deep_mode: 'Deep mode', in_all_modes: 'All modes',
     water_saving: 'Water saving', high_frequency: 'High', low_frequency: 'Low',
   };
+  // The integration's suction keys differ from the Dreame app's names (strong = Turbo, turbo = Max).
+  const SUCTION_APP = { quiet: 'Quiet', standard: 'Standard', strong: 'Turbo', turbo: 'Max' };
+  const WET_NAMES = ['Slightly dry', 'Moist', 'Wet'];
   const MODE_ICON = {
     sweeping: 'mdi:fan',
     mopping: 'mdi:water-outline',
@@ -174,6 +177,9 @@ select.sel{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-bg2);border:1px solid var(--dv-div);border-radius:8px;min-height:40px;padding:0 8px}
 .range{display:flex;align-items:center;gap:10px;flex:1 1 200px}
 .range input{flex:1;accent-color:var(--dv-pbtn);height:28px}
+.wet{width:100%;accent-color:var(--dv-pbtn);height:28px;margin:0}
+.thirds{display:grid;grid-template-columns:repeat(3,1fr);font-size:12px;color:var(--dv-text2);text-align:center}
+.thirds .on{color:var(--dv-pt);font-weight:600}
 .range span{font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
 /* map */
 .mapbox{position:relative;overflow:hidden;background:var(--dv-mapbg);min-height:0}
@@ -334,6 +340,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         entity: 'Vacuum', map_entity: 'Map camera (optional)', title: 'Title (optional)', layout: 'Layout',
         height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', default_target: 'Default cleaning target',
         show_back: 'Show back button', show_menu: 'Show HA menu button', fullscreen: 'Fill the screen in panel views',
+        show_water_tank_draining: 'Show Water Tank Draining (needs drain & refill kit)', show_auto_water_refilling: 'Show Auto Water Refilling (needs drain & refill kit)',
         care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)',
       };
       return {
@@ -351,6 +358,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
               { name: 'show_back', selector: { boolean: {} } },
               { name: 'show_menu', selector: { boolean: {} } },
               { name: 'fullscreen', selector: { boolean: {} } },
+              { name: 'show_water_tank_draining', selector: { boolean: {} } },
+              { name: 'show_auto_water_refilling', selector: { boolean: {} } },
               { name: 'care_warning', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
               { name: 'care_critical', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
             ],
@@ -364,7 +373,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!config || !config.entity || !String(config.entity).startsWith('vacuum.')) {
         throw new Error('Set "entity" to your Dreame vacuum, e.g. entity: vacuum.my_robot');
       }
-      this._config = { layout: 'auto', fullscreen: true, care_warning: 20, care_critical: 10, default_target: 'all', ...config };
+      this._config = { layout: 'auto', fullscreen: true, show_water_tank_draining: false, show_auto_water_refilling: false, care_warning: 20, care_critical: 10, default_target: 'all', ...config };
       this._ui.target = this._ui.target || this._config.default_target;
       this._map = null;
       this._sig = null;
@@ -533,13 +542,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       let out = '';
       try { out = stateObj && this._hass.formatEntityState ? this._hass.formatEntityState(stateObj, raw) : ''; } catch (e) { out = ''; }
       if (!out || out === raw) out = human(raw);
+      const opts = stateObj?.attributes?.options;
+      if (/_suction_level$/.test(stateObj?.entity_id || '') && SUCTION_APP[raw] && Array.isArray(opts) && !opts.includes('max')) out = SUCTION_APP[raw];
       return out;
     }
 
     /** Label for a select option: short form for compact buttons, otherwise translated. */
     _opt(stateObj, o, short = true) {
       const full = this._fmt(stateObj, o);
-      return short ? (SHORT[o] || SHORT[full] || full) : full;
+      return short ? (SHORT[o] || SHORT[full] || full) : full;  // suction keys are absent from SHORT on purpose
     }
 
     /** Numeric sensor with its own unit, rounded for display. */
@@ -948,7 +959,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const ssel = this._select('suction_level');
       const hsel = this._select('mop_pad_humidity') || this._select('water_volume');
       const suction = ssel ? this._opt(ssel.so, ssel.value, false) : (a.suction_level || '');
-      const hum = hsel ? this._opt(hsel.so, hsel.value, false) : '';
+      const hum = this._wet() ? this._wet().name : (hsel ? this._opt(hsel.so, hsel.value, false) : '');
       const lay = this._layout();
       const showProg = (s.running || s.paused) && prog !== null;
       return `<div class="st">
@@ -997,6 +1008,24 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         <button class="sw" role="switch" aria-checked="${on}" aria-label="${esc(title)}" data-a="toggle" data-e="${s.entity_id}"></button></div>`;
     }
 
+    /** Wetness slider (1-32) split into thirds named like the select it replaces. */
+    _wet() {
+      const st = this._live('number', 'wetness_level');
+      if (!st) return null;
+      const min = Number(st.attributes.min ?? 1), max = Number(st.attributes.max ?? 32);
+      const v = Number(st.state);
+      const third = Math.max(0, Math.min(2, Math.floor((v - min) / ((max - min + 1) / 3))));
+      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third, name: WET_NAMES[third] };
+    }
+
+    _wetControl(dis) {
+      const w = this._wet();
+      if (!w) return '';
+      return `<div class="stack-s"><div class="between"><span class="lbl">Wetness</span><span class="small muted">${esc(w.name)} · ${w.v}</span></div>
+        <div class="${dis ? 'dis' : ''}" style="${dis ? 'opacity:.5;pointer-events:none' : ''}"><input class="wet" type="range" min="${w.min}" max="${w.max}" step="${w.step}" value="${w.v}" data-a="num" data-e="${w.id}" aria-label="Wetness" aria-valuetext="${esc(w.name)}" ${dis ? 'disabled' : ''}>
+        <div class="thirds">${WET_NAMES.map((n, i) => `<span class="${i === w.third ? 'on' : ''}">${n}</span>`).join('')}</div></div></div>`;
+    }
+
     _cleaningControls() {
       const genius = this._select('cleangenius');
       const geniusOn = genius && !/^off$/i.test(genius.value);
@@ -1010,7 +1039,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (toggles.length) parts.push(`<div class="stack-s">${toggles.join('')}</div>`);
       parts.push(this._seg(this._select('cleaning_mode'), { label: 'Mode', icons: true }));
       parts.push(this._seg(this._select('suction_level'), { label: 'Suction', dis: manualDis }));
-      parts.push(this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume', dis: manualDis }));
+      parts.push(this._wetControl(manualDis) || this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume', dis: manualDis }));
       parts.push(this._seg(this._select('cleaning_route'), { label: 'Route', dis: manualDis }));
       if (this._ui.target !== 'all') {
         parts.push(`<div class="stack-s"><span class="lbl">Passes</span><div class="seg" role="group" aria-label="Passes">${[1, 2, 3].map((p) => `<button class="${this._ui.passes === p ? 'on' : ''}" aria-pressed="${this._ui.passes === p}" data-a="passes" data-v="${p}">${p}×</button>`).join('')}</div></div>`);
@@ -1225,7 +1254,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (g && !/^off$/i.test(g.value)) parts.push(`CleanGenius ${lab(g)}`);
       else {
         const su = this._select('suction_level'); if (su) parts.push(lab(su));
-        const hu = this._select('mop_pad_humidity') || this._select('water_volume'); if (hu) parts.push(this._opt(hu.so, hu.value, false));
+        const hu = this._select('mop_pad_humidity') || this._select('water_volume'); if (this._wet()) parts.push(this._wet().name); else if (hu) parts.push(this._opt(hu.so, hu.value, false));
       }
       if (this._ui.target !== 'all') parts.push(`${this._ui.passes}×`);
       return parts.join(' · ');
@@ -1279,7 +1308,6 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const d = id.split('.')[0];
       const name = esc(labelOverride || this._name(id));
       const off = d === 'button' ? s.state === 'unavailable' : OFF_STATES.includes(s.state);
-      if (d === 'button' && off) return ''; // this dock lacks the feature (e.g. water tank draining)
       if (d === 'switch') {
         return `<div class="row"><span class="name">${name}</span><button class="sw" role="switch" aria-checked="${s.state === 'on'}" aria-label="${name}" data-a="toggle" data-e="${id}" ${off ? 'disabled' : ''}></button></div>`;
       }
@@ -1333,8 +1361,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _dockView() {
       const a = this._a;
       const lay = this._layout();
-      const ids = this._keysFor(DOCK_KEYS);
-      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'], ['button']);
+      const c = this._config;
+      const ids = this._keysFor(DOCK_KEYS.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling));
+      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'].filter((k) => k !== 'water_tank_draining' || c.show_water_tank_draining), ['button']);
       return `${this._viewHead('Dock', this._dockState())}
         <div style="display:grid;grid-template-columns:${lay === 'desktop' ? 'minmax(320px,420px) minmax(0,1fr)' : '1fr'};gap:12px;align-items:start">
           <div class="stack"><section class="panel pad">${this._dockBlock(lay === 'phone')}</section>
