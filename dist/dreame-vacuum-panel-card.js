@@ -35,6 +35,8 @@
   // The integration's suction keys differ from the Dreame app's names (strong = Turbo, turbo = Max).
   const SUCTION_APP = { quiet: 'Quiet', standard: 'Standard', strong: 'Turbo', turbo: 'Max' };
   const WET_NAMES = ['Slightly dry', 'Moist', 'Wet'];
+  const WET_SHORT = ['Dry', 'Moist', 'Wet'];
+  const WET_TOPS = [5, 26]; // last level of the first two bands on a 1-32 scale (observed from the robot)
   const MODE_ICON = {
     sweeping: 'mdi:fan',
     mopping: 'mdi:water-outline',
@@ -178,13 +180,17 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .range{display:flex;align-items:center;gap:10px;flex:1 1 200px}
 .range input{flex:1;accent-color:var(--dv-pbtn);height:28px}
 .wet{width:100%;accent-color:var(--dv-pbtn);height:28px;margin:0}
-.thirds{display:grid;grid-template-columns:repeat(3,1fr);font-size:12px;color:var(--dv-text2);text-align:center}
+.thirds{display:flex;font-size:12px;color:var(--dv-text2);text-align:center;margin-top:2px}
+.thirds span{min-width:0;border-top:3px solid var(--dv-div);padding-top:3px}
+.thirds span+span{margin-left:2px}
+.thirds .on{border-top-color:var(--dv-p)}
 .thirds .on{color:var(--dv-pt);font-weight:600}
 .range span{font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
 /* map */
 .mapbox{position:relative;overflow:hidden;background:var(--dv-mapbg);min-height:0}
 .map{position:absolute;inset:0}
-.fit{position:absolute;touch-action:none}
+.fit{position:absolute;touch-action:none;visibility:hidden}
+.fit.ready{visibility:visible}
 .fit img{width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
 .ov{position:absolute;inset:0;cursor:pointer}
 .ov.zone,.ov.spot{cursor:crosshair}
@@ -675,6 +681,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (W <= 0 || H <= 0) return;
       const s = Math.min(W / this._nat.w, H / this._nat.h);
       const w = this._nat.w * s, h = this._nat.h * s;
+      fit.classList.add('ready');
       fit.style.width = `${w}px`;
       fit.style.height = `${h}px`;
       fit.style.left = `${(box.clientWidth - w) / 2}px`;
@@ -705,7 +712,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         this._regions = {};
         const h = this._config.height || 'calc(100dvh - var(--header-height, 56px) - 16px)';
         const accent = this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '';
-        root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}" style="--dv-h:${esc(h)};${accent}">${this._shell(lay, view)}</ha-card>`;
+        root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}${this._fsGeo && this._fsWanted() ? ' fs' : ''}" style="--dv-h:${esc(h)};${accent}${this._fsGeo && this._fsWanted() ? `--dv-top:${this._fsGeo.top}px;--dv-left:${this._fsGeo.left}px;--dv-w:${this._fsGeo.width}px;` : ''}">${this._shell(lay, view)}</ha-card>`;
         const img = root.querySelector('[data-img]');
         if (img) {
           img.addEventListener('load', () => {
@@ -724,7 +731,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           this._sheetRO.observe(sheet);
         }
       }
-      this._applyFs();
+      this._applyFs(false); // reuse cached geometry so a rebuilt shell is born in place
       this._renderRegions();
       const img = root.querySelector('[data-img]');
       const url = this._imgUrl();
@@ -765,7 +772,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._locked = null;
     }
 
-    _applyFs() {
+    _applyFs(measure = true) {
       const card = this.shadowRoot.querySelector('ha-card.dv');
       if (!card || !this.isConnected) return;
       const on = this._fsWanted();
@@ -779,10 +786,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         el.scrollTop = 0;
         el.style.overflow = 'hidden';
       });
-      const r = this.getBoundingClientRect();
-      card.style.setProperty('--dv-top', `${Math.max(0, r.top)}px`);
-      card.style.setProperty('--dv-left', `${r.left}px`);
-      card.style.setProperty('--dv-w', `${r.width}px`);
+      if (measure || !this._fsGeo) {
+        const r = this.getBoundingClientRect();
+        this._fsGeo = { top: Math.max(0, r.top), left: r.left, width: r.width };
+      }
+      const g = this._fsGeo;
+      card.style.setProperty('--dv-top', `${g.top}px`);
+      card.style.setProperty('--dv-left', `${g.left}px`);
+      card.style.setProperty('--dv-w', `${g.width}px`);
       const size = `${card.clientWidth}x${card.clientHeight}`;
       if (size !== this._fsSize) { this._fsSize = size; this._fit(); }
     }
@@ -1014,13 +1025,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!st) return null;
       const min = Number(st.attributes.min ?? 1), max = Number(st.attributes.max ?? 32);
       const v = Number(st.state);
-      const third = Math.max(0, Math.min(2, Math.floor((v - min) / ((max - min + 1) / 3))));
+      const std = min === 1 && max === 32;
+      const tops = std ? WET_TOPS : [min + Math.ceil((max - min + 1) / 3) - 1, min + Math.ceil(2 * (max - min + 1) / 3) - 1];
+      const third = v <= tops[0] ? 0 : v <= tops[1] ? 1 : 2;
+      const sizes = [tops[0] - min + 1, tops[1] - tops[0], max - tops[1]];
       // The robot decides where the level bands start (observed: not exact thirds), so prefer
       // the humidity select, which the integration derives from the same value.
       const hs = this._live('select', 'mop_pad_humidity');
       const idx = hs ? ['slightly_dry', 'moist', 'wet'].indexOf(hs.state) : -1;
       const band = idx >= 0 ? idx : third;
-      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third: band, name: WET_NAMES[band] };
+      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third: band, name: WET_NAMES[band], sizes };
     }
 
     _wetControl(dis) {
@@ -1028,7 +1042,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!w) return '';
       return `<div class="stack-s"><div class="between"><span class="lbl">Wetness</span><span class="small muted">${esc(w.name)} · ${w.v}</span></div>
         <div class="${dis ? 'dis' : ''}" style="${dis ? 'opacity:.5;pointer-events:none' : ''}"><input class="wet" type="range" min="${w.min}" max="${w.max}" step="${w.step}" value="${w.v}" data-a="num" data-e="${w.id}" aria-label="Wetness" aria-valuetext="${esc(w.name)}" ${dis ? 'disabled' : ''}>
-        <div class="thirds">${WET_NAMES.map((n, i) => `<span class="${i === w.third ? 'on' : ''}">${n}</span>`).join('')}</div></div></div>`;
+        <div class="thirds">${WET_SHORT.map((n, i) => `<span class="${i === w.third ? 'on' : ''}" style="flex:${w.sizes[i]} 1 0">${n}</span>`).join('')}</div></div></div>`;
     }
 
     _cleaningControls() {
