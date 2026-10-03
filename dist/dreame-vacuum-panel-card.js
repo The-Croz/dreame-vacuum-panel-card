@@ -1276,7 +1276,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _toast() {
       if (this._ui.pop) return '';
-      const notes = this._notes();
+      // Consumable upkeep (cons_*) lives in the bell badge only; the banner is for faults and problems.
+      const notes = this._notes().filter((x) => !x.id.startsWith('cons_'));
       if (!notes.length) return '';
       const n = notes[0];
       return `<button class="toast ${n.level === 'crit' ? 'crit' : ''}" data-a="pop" data-v="care">${ic(n.icon, `style="--mdc-icon-size:18px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})"`)}
