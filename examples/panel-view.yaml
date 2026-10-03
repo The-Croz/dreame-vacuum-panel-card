@@ -16,4 +16,9 @@ cards:
     # care_warning: 20                 # % at which a part shows a care alert
     # care_critical: 10                # % at which the alert turns red
     # accent_color: "#0a76b8"          # defaults to your theme's primary color
-    # height: 100vh                    # defaults to the visible screen height
+    # height: 100vh                    # used when fullscreen is off
+    # fullscreen: true                 # true | false | force (force = even outside a panel view)
+    # show_back: true                  # back button, handy in kiosk mode
+    # show_menu: true                  # opens HA's sidebar, handy in kiosk mode
+    # show_water_tank_draining: false  # only for docks with the drain-and-refill kit
+    # show_auto_water_refilling: false # only for docks with the drain-and-refill kit

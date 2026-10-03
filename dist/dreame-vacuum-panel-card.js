@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -32,6 +32,11 @@
     in_deep_mode: 'Deep mode', in_all_modes: 'All modes',
     water_saving: 'Water saving', high_frequency: 'High', low_frequency: 'Low',
   };
+  // The integration's suction keys differ from the Dreame app's names (strong = Turbo, turbo = Max).
+  const SUCTION_APP = { quiet: 'Quiet', standard: 'Standard', strong: 'Turbo', turbo: 'Max' };
+  const WET_NAMES = ['Slightly dry', 'Moist', 'Wet'];
+  const WET_SHORT = ['Dry', 'Moist', 'Wet'];
+  const WET_TOPS = [5, 26]; // last level of the first two bands on a 1-32 scale (observed from the robot)
   const MODE_ICON = {
     sweeping: 'mdi:fan',
     mopping: 'mdi:water-outline',
@@ -77,6 +82,7 @@
   /* ------------------------------------------------------------------ */
   const CSS = `
 :host{display:block}
+:host(.fs){height:0}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 ha-card.dv{
@@ -99,11 +105,12 @@ ha-card.dv{
   --dv-errbg:color-mix(in srgb,var(--dv-err) 13%,var(--dv-bg));
   --dv-r:var(--ha-card-border-radius,12px);
   --dv-mapbg:var(--dv-bg2);
-  height:var(--dv-h);min-height:480px;position:relative;overflow:hidden;
+  height:var(--dv-h);min-height:480px;position:relative;overflow:hidden;isolation:isolate;
   background:var(--dv-page);color:var(--dv-text);
   font-family:var(--ha-font-family-body,Roboto,'Helvetica Neue',system-ui,sans-serif);
   -webkit-font-smoothing:antialiased;
 }
+ha-card.dv.fs{position:fixed;top:var(--dv-top,0);left:var(--dv-left,0);width:var(--dv-w,100%);bottom:0;height:auto;min-height:0;z-index:1;border-radius:0;overscroll-behavior:none}
 ha-icon{--mdc-icon-size:20px;display:inline-flex;flex-shrink:0}
 button{font-family:inherit;color:inherit}
 .panel{background:var(--dv-bg);border:1px solid var(--dv-div);border-radius:var(--dv-r);min-width:0}
@@ -130,6 +137,7 @@ button{font-family:inherit;color:inherit}
 .btn:hover{background:var(--dv-bg2)}
 .btn.pri{background:var(--dv-pbtn);color:#fff;border-color:transparent}
 .btn.pri:hover{filter:brightness(1.08)}
+.btn.stopwash{border-color:var(--dv-err);color:var(--dv-errt);background:var(--dv-errbg);min-height:48px}
 .btn.sm{min-height:36px;border-radius:18px;font-size:13px;padding:0 12px}
 .btn.ghost{border-color:transparent;background:transparent;color:var(--dv-text2)}
 .btn.sq{width:48px;padding:0}
@@ -172,11 +180,18 @@ select.sel{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-bg2);border:1px solid var(--dv-div);border-radius:8px;min-height:40px;padding:0 8px}
 .range{display:flex;align-items:center;gap:10px;flex:1 1 200px}
 .range input{flex:1;accent-color:var(--dv-pbtn);height:28px}
+.wet{width:100%;accent-color:var(--dv-pbtn);height:28px;margin:0}
+.thirds{display:flex;font-size:12px;color:var(--dv-text2);text-align:center;margin-top:2px}
+.thirds span{min-width:0;border-top:3px solid var(--dv-div);padding-top:3px}
+.thirds span+span{margin-left:2px}
+.thirds .on{border-top-color:var(--dv-p)}
+.thirds .on{color:var(--dv-pt);font-weight:600}
 .range span{font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
 /* map */
 .mapbox{position:relative;overflow:hidden;background:var(--dv-mapbg);min-height:0}
 .map{position:absolute;inset:0}
-.fit{position:absolute;touch-action:none}
+.fit{position:absolute;touch-action:none;visibility:hidden}
+.fit.ready{visibility:visible}
 .fit img{width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
 .ov{position:absolute;inset:0;cursor:pointer}
 .ov.zone,.ov.spot{cursor:crosshair}
@@ -202,6 +217,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .menu button{display:flex;align-items:center;gap:14px;width:100%;min-height:52px;border:0;background:none;padding:0 18px;font-size:15px;cursor:pointer;text-align:left}
 .menu button:hover{background:var(--dv-bg2)}
 .toast{position:absolute;left:12px;right:12px;z-index:3;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 8px 0 14px;border-radius:22px;border:0;background:var(--dv-warnbg);color:var(--dv-text);font-size:13px;cursor:pointer;text-align:left;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.ph .toast{bottom:calc(var(--sheet-h,300px) + 2px)}
 .toast.crit{background:var(--dv-errbg)}
 .alert{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--dv-warnbg);border:0;width:100%;text-align:left;cursor:pointer;color:var(--dv-text)}
 .alert.crit{background:var(--dv-errbg)}
@@ -237,8 +253,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .obs figure{margin:0;display:flex;flex-direction:column;gap:6px;font-size:12px}
 .obs img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:var(--dv-bg2)}
 /* remote */
-.dpad{position:relative;width:280px;height:280px;border-radius:50%;background:var(--dv-bg2);align-self:center;flex-shrink:0;touch-action:none}
-.dpad button{position:absolute;width:72px;height:72px;border-radius:50%;border:0;background:var(--dv-bg);color:var(--dv-text);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 1px var(--dv-div),0 2px 6px rgba(0,0,0,.08);user-select:none;-webkit-user-select:none}
+.dpad{--b:72px;position:relative;width:280px;height:280px;border-radius:50%;background:var(--dv-bg2);align-self:center;flex-shrink:0;touch-action:none}
+.dpad button{position:absolute;width:var(--b);height:var(--b);border-radius:50%;border:0;background:var(--dv-bg);color:var(--dv-text);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 1px var(--dv-div),0 2px 6px rgba(0,0,0,.08);user-select:none;-webkit-user-select:none}
 .dpad button:active,.dpad button.held{background:var(--dv-tint);color:var(--dv-pt)}
 .dpad button ha-icon{--mdc-icon-size:30px}
 .dpad .c{background:var(--dv-pbtn);color:#fff}
@@ -255,6 +271,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .rail button:hover{background:var(--dv-bg2);color:var(--dv-text)}
 .rail button.on{background:var(--dv-tint);color:var(--dv-pt)}
 .rail .badge{top:4px;right:12px}
+.rail .hanav{display:flex;flex-direction:column;align-items:center;gap:2px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--dv-div);flex-shrink:0}
+.rail .hanav .hab,.tabs .hanav .hab{width:44px;min-height:44px;height:44px;border-radius:50%;gap:0;flex:0 0 auto}
+.tabs .hanav{display:flex;align-items:center;gap:2px;padding-right:6px;margin-right:4px;border-right:1px solid var(--dv-div);flex-shrink:0}
+.tabs .hanav .hab:hover{background:var(--dv-bg2);color:var(--dv-text)}
 .view{overflow:auto;min-height:0;min-width:0}
 .desk.v .view{display:flex;flex-direction:column}
 .desk.v .hist{flex:1 1 auto;height:auto}
@@ -282,7 +302,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .ph .map{top:72px;bottom:var(--sheet-h,300px)}
 .ph-top{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;align-items:center;z-index:4}
 .spill{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;padding:6px 14px;border-radius:26px;min-height:52px;background:var(--dv-bg);border:1px solid var(--dv-div);box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.sheet{position:absolute;left:0;right:0;bottom:0;max-height:74%;overflow:auto;background:var(--dv-bg);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:0 14px 14px;z-index:3;display:flex;flex-direction:column;gap:12px}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:74%;overflow:auto;background:var(--dv-bg);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;flex-direction:column;gap:12px}
 .grab{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--dv-div);margin-top:8px;flex-shrink:0}
 .stabs{display:flex;border-bottom:1px solid var(--dv-div);margin:0 -14px;padding:0 10px;flex-shrink:0}
 .stabs button{flex:1 1 0;min-height:44px;border:0;background:none;font-size:14px;font-weight:500;color:var(--dv-text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;border-bottom:2px solid transparent;margin-bottom:-1px}
@@ -293,8 +313,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .ph-head{display:flex;align-items:center;gap:4px;padding:8px 8px 8px 4px;min-height:60px;background:var(--dv-bg);border-bottom:1px solid var(--dv-div);flex-shrink:0}
 .ph.v .view{flex:1 1 auto;padding:12px}
 .ph .hist{grid-template-columns:1fr;height:auto}
-.ph .dpad{width:250px;height:250px}
-.ph .dpad button{width:64px;height:64px}
+.ph .dpad{--b:64px;width:250px;height:250px}
 @media (prefers-reduced-motion:reduce){.sw::after{transition:none}}
 `;
 
@@ -330,6 +349,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const labels = {
         entity: 'Vacuum', map_entity: 'Map camera (optional)', title: 'Title (optional)', layout: 'Layout',
         height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', default_target: 'Default cleaning target',
+        show_back: 'Show back button', show_menu: 'Show HA menu button', fullscreen: 'Fill the screen in panel views',
+        show_water_tank_draining: 'Show Water Tank Draining (needs drain & refill kit)', show_auto_water_refilling: 'Show Auto Water Refilling (needs drain & refill kit)',
         care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)',
       };
       return {
@@ -344,6 +365,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
               { name: 'default_target', selector: { select: { mode: 'dropdown', options: [{ value: 'all', label: 'All rooms' }, { value: 'rooms', label: 'Rooms' }] } } },
               { name: 'height', selector: { text: {} } },
               { name: 'accent_color', selector: { text: {} } },
+              { name: 'show_back', selector: { boolean: {} } },
+              { name: 'show_menu', selector: { boolean: {} } },
+              { name: 'fullscreen', selector: { boolean: {} } },
+              { name: 'show_water_tank_draining', selector: { boolean: {} } },
+              { name: 'show_auto_water_refilling', selector: { boolean: {} } },
               { name: 'care_warning', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
               { name: 'care_critical', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
             ],
@@ -357,7 +383,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!config || !config.entity || !String(config.entity).startsWith('vacuum.')) {
         throw new Error('Set "entity" to your Dreame vacuum, e.g. entity: vacuum.my_robot');
       }
-      this._config = { layout: 'auto', care_warning: 20, care_critical: 10, default_target: 'all', ...config };
+      this._config = { layout: 'auto', fullscreen: true, show_water_tank_draining: false, show_auto_water_refilling: false, care_warning: 20, care_critical: 10, default_target: 'all', ...config };
       this._ui.target = this._ui.target || this._config.default_target;
       this._map = null;
       this._sig = null;
@@ -396,14 +422,31 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           if (w > 0) this._w = w;
           const rendered = this._shellKey ? this._shellKey.split(':')[0] : null;
           if (rendered !== this._layout()) this._schedule();
-          else this._fit();
+          else { this._applyFs(); this._fit(); }
         });
       }
       this._ro.observe(this);
+      this._onWin = this._onWin || (() => this._applyFs());
+      // A held drive button must never outlive the page: stop if it is hidden, blurred or unloaded.
+      this._onHide = this._onHide || (() => this._stopHold());
+      document.addEventListener('visibilitychange', this._onHide);
+      window.addEventListener('blur', this._onHide);
+      window.addEventListener('pagehide', this._onHide);
+      window.addEventListener('resize', this._onWin);
+      window.visualViewport && window.visualViewport.addEventListener('resize', this._onWin);
       this._schedule();
+      // HA lays out its header after the card connects, so measure again once it settles.
+      this._hTimer = setTimeout(this._onWin, 400);
     }
 
     disconnectedCallback() {
+      document.removeEventListener('visibilitychange', this._onHide);
+      window.removeEventListener('blur', this._onHide);
+      window.removeEventListener('pagehide', this._onHide);
+      window.removeEventListener('resize', this._onWin);
+      window.visualViewport && window.visualViewport.removeEventListener('resize', this._onWin);
+      clearTimeout(this._hTimer);
+      this._unlockScroll();
       this._ro && this._ro.disconnect();
       this._sheetRO && this._sheetRO.disconnect();
       this._stopHold();
@@ -495,10 +538,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const err = st === 'error' || !!a.has_error && st === 'error';
       const ss = this._live('sensor', 'status');
       let text = ss ? this._fmt(ss) : (human(a.status) || this._fmt(v));
+      const fl = this._dockFlags();
+      if (fl.washingPaused) text = 'Mop wash paused';
+      else if (fl.washing) text = 'Washing mops';
       const room = this._live('sensor', 'current_room')?.state;
       if ((running || paused) && room) text += ` · ${room}`;
       let dot = '';
       if (st === 'error') dot = 'err';
+      else if (fl.washingPaused) dot = 'warn';
       else if (running) dot = 'ok';
       else if (paused || st === 'returning') dot = 'warn';
       return { running, paused, err, text, dot, state: st };
@@ -517,13 +564,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       let out = '';
       try { out = stateObj && this._hass.formatEntityState ? this._hass.formatEntityState(stateObj, raw) : ''; } catch (e) { out = ''; }
       if (!out || out === raw) out = human(raw);
+      const opts = stateObj?.attributes?.options;
+      if (/_suction_level$/.test(stateObj?.entity_id || '') && SUCTION_APP[raw] && Array.isArray(opts) && !opts.includes('max')) out = SUCTION_APP[raw];
       return out;
     }
 
     /** Label for a select option: short form for compact buttons, otherwise translated. */
     _opt(stateObj, o, short = true) {
       const full = this._fmt(stateObj, o);
-      return short ? (SHORT[o] || SHORT[full] || full) : full;
+      return short ? (SHORT[o] || SHORT[full] || full) : full;  // suction keys are absent from SHORT on purpose
     }
 
     /** Numeric sensor with its own unit, rounded for display. */
@@ -648,6 +697,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (W <= 0 || H <= 0) return;
       const s = Math.min(W / this._nat.w, H / this._nat.h);
       const w = this._nat.w * s, h = this._nat.h * s;
+      fit.classList.add('ready');
       fit.style.width = `${w}px`;
       fit.style.height = `${h}px`;
       fit.style.left = `${(box.clientWidth - w) / 2}px`;
@@ -676,9 +726,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (key !== this._shellKey) {
         this._shellKey = key;
         this._regions = {};
-        const h = this._config.height || 'calc(100vh - var(--header-height, 56px) - 16px)';
+        const h = this._config.height || 'calc(100dvh - var(--header-height, 56px) - 16px)';
         const accent = this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '';
-        root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}" style="--dv-h:${esc(h)};${accent}">${this._shell(lay, view)}</ha-card>`;
+        root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}${this._fsGeo && this._fsWanted() ? ' fs' : ''}" style="--dv-h:${esc(h)};${accent}${this._fsGeo && this._fsWanted() ? `--dv-top:${this._fsGeo.top}px;--dv-left:${this._fsGeo.left}px;--dv-w:${this._fsGeo.width}px;` : ''}">${this._shell(lay, view)}</ha-card>`;
         const img = root.querySelector('[data-img]');
         if (img) {
           img.addEventListener('load', () => {
@@ -697,6 +747,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           this._sheetRO.observe(sheet);
         }
       }
+      this._applyFs(false); // reuse cached geometry so a rebuilt shell is born in place
       this._renderRegions();
       const img = root.querySelector('[data-img]');
       const url = this._imgUrl();
@@ -707,6 +758,62 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._fit();
     }
 
+    /* "App within an app": in a panel view the card leaves HA's flow and pins itself to the
+       visible viewport (position:fixed), starting just below HA's header. The page scroller is
+       locked while mounted, so there is no height maths to get wrong and nothing to scroll. */
+    _scrollers() {
+      const out = [];
+      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
+        if (n === document.documentElement) { out.push(document.documentElement); continue; }
+        const oy = getComputedStyle(n).overflowY;
+        if (oy === 'auto' || oy === 'scroll' || oy === 'overlay') out.push(n);
+      }
+      return out;
+    }
+
+    _fsWanted() {
+      const fs = this._config?.fullscreen;
+      if (fs === false) return false;
+      if (fs === 'force') return true;
+      for (let n = this.parentElement || this.getRootNode().host; n; n = n.parentElement || (n.getRootNode && n.getRootNode().host)) {
+        if (n.localName === 'hui-panel-view') return true;
+        if (/dialog|preview/.test(n.localName)) return false;
+      }
+      return false;
+    }
+
+    _unlockScroll() {
+      if (!this._locked) return;
+      this._locked.forEach((prev, el) => { el.style.overflow = prev; });
+      this._locked = null;
+    }
+
+    _applyFs(measure = true) {
+      const card = this.shadowRoot.querySelector('ha-card.dv');
+      if (!card || !this.isConnected) return;
+      const on = this._fsWanted();
+      this.classList.toggle('fs', on);
+      card.classList.toggle('fs', on);
+      if (!on) { this._unlockScroll(); return; }
+      this._locked = this._locked || new Map();
+      this._scrollers().forEach((el) => {
+        if (this._locked.has(el)) return;
+        this._locked.set(el, el.style.overflow);
+        el.scrollTop = 0;
+        el.style.overflow = 'hidden';
+      });
+      if (measure || !this._fsGeo) {
+        const r = this.getBoundingClientRect();
+        this._fsGeo = { top: Math.max(0, r.top), left: r.left, width: r.width };
+      }
+      const g = this._fsGeo;
+      card.style.setProperty('--dv-top', `${g.top}px`);
+      card.style.setProperty('--dv-left', `${g.left}px`);
+      card.style.setProperty('--dv-w', `${g.width}px`);
+      const size = `${card.clientWidth}x${card.clientHeight}`;
+      if (size !== this._fsSize) { this._fsSize = size; this._fit(); }
+    }
+
     _placeSheet() {
       const root = this.shadowRoot;
       const sheet = root.querySelector('.sheet');
@@ -714,8 +821,6 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!sheet || !ph) return;
       const hgt = sheet.offsetHeight;
       ph.style.setProperty('--sheet-h', `${hgt + 8}px`);
-      const toast = root.querySelector('.toast');
-      if (toast) toast.style.bottom = `${hgt + 10}px`;
       this._fit();
     }
 
@@ -835,8 +940,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         const badge = id === 'care' && n ? `<span class="badge">${n}</span>` : '';
         return `<button class="${on ? 'on' : ''}" data-a="view" data-v="${id}" ${on ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label}</span>${badge}</button>`;
       }).join('');
-      if (lay === 'desktop') return `<div class="me" title="${esc(this._title())}">${ic('mdi:robot-vacuum')}</div>${items}`;
-      return items;
+      const ha = this._haNav();
+      if (lay === 'desktop') return `${ha ? `<div class="hanav">${ha}</div>` : ''}<div class="me" title="${esc(this._title())}">${ic('mdi:robot-vacuum')}</div>${items}`;
+      return ha ? `<div class="hanav">${ha}</div>${items}` : items;
+    }
+
+    // Back / HA-menu buttons for kiosk mode (HA header hidden). Shared by every layout.
+    _haNav(cls = 'hab') {
+      const c = this._config;
+      return `${c.show_back ? `<button class="${cls}" data-a="nav" data-v="back" aria-label="Back">${ic('mdi:arrow-left')}</button>` : ''}${c.show_menu ? `<button class="${cls}" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}`;
     }
 
     _battery() {
@@ -881,7 +993,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const ssel = this._select('suction_level');
       const hsel = this._select('mop_pad_humidity') || this._select('water_volume');
       const suction = ssel ? this._opt(ssel.so, ssel.value, false) : (a.suction_level || '');
-      const hum = hsel ? this._opt(hsel.so, hsel.value, false) : '';
+      const hum = this._wet() ? this._wet().name : (hsel ? this._opt(hsel.so, hsel.value, false) : '');
       const lay = this._layout();
       const showProg = (s.running || s.paused) && prog !== null;
       return `<div class="st">
@@ -930,6 +1042,32 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         <button class="sw" role="switch" aria-checked="${on}" aria-label="${esc(title)}" data-a="toggle" data-e="${s.entity_id}"></button></div>`;
     }
 
+    /** Wetness slider (1-32) split into thirds named like the select it replaces. */
+    _wet() {
+      const st = this._live('number', 'wetness_level');
+      if (!st) return null;
+      const min = Number(st.attributes.min ?? 1), max = Number(st.attributes.max ?? 32);
+      const v = Number(st.state);
+      const std = min === 1 && max === 32;
+      const tops = std ? WET_TOPS : [min + Math.ceil((max - min + 1) / 3) - 1, min + Math.ceil(2 * (max - min + 1) / 3) - 1];
+      const third = v <= tops[0] ? 0 : v <= tops[1] ? 1 : 2;
+      const sizes = [tops[0] - min + 1, tops[1] - tops[0], max - tops[1]];
+      // The robot decides where the level bands start (observed: not exact thirds), so prefer
+      // the humidity select, which the integration derives from the same value.
+      const hs = this._live('select', 'mop_pad_humidity');
+      const idx = hs ? ['slightly_dry', 'moist', 'wet'].indexOf(hs.state) : -1;
+      const band = idx >= 0 ? idx : third;
+      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third: band, name: WET_NAMES[band], sizes };
+    }
+
+    _wetControl(dis) {
+      const w = this._wet();
+      if (!w) return '';
+      return `<div class="stack-s"><div class="between"><span class="lbl">Wetness</span><span class="small muted">${esc(w.name)} · ${w.v}</span></div>
+        <div class="${dis ? 'dis' : ''}" style="${dis ? 'opacity:.5;pointer-events:none' : ''}"><input class="wet" type="range" min="${w.min}" max="${w.max}" step="${w.step}" value="${w.v}" data-a="num" data-e="${w.id}" aria-label="Wetness" aria-valuetext="${esc(w.name)}" ${dis ? 'disabled' : ''}>
+        <div class="thirds">${WET_SHORT.map((n, i) => `<span class="${i === w.third ? 'on' : ''}" style="flex:${w.sizes[i]} 1 0">${n}</span>`).join('')}</div></div></div>`;
+    }
+
     _cleaningControls() {
       const genius = this._select('cleangenius');
       const geniusOn = genius && !/^off$/i.test(genius.value);
@@ -943,7 +1081,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (toggles.length) parts.push(`<div class="stack-s">${toggles.join('')}</div>`);
       parts.push(this._seg(this._select('cleaning_mode'), { label: 'Mode', icons: true }));
       parts.push(this._seg(this._select('suction_level'), { label: 'Suction', dis: manualDis }));
-      parts.push(this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume', dis: manualDis }));
+      parts.push(this._wetControl(manualDis) || this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume', dis: manualDis }));
       parts.push(this._seg(this._select('cleaning_route'), { label: 'Route', dis: manualDis }));
       if (this._ui.target !== 'all') {
         parts.push(`<div class="stack-s"><span class="lbl">Passes</span><div class="seg" role="group" aria-label="Passes">${[1, 2, 3].map((p) => `<button class="${this._ui.passes === p ? 'on' : ''}" aria-pressed="${this._ui.passes === p}" data-a="passes" data-v="${p}">${p}×</button>`).join('')}</div></div>`);
@@ -965,10 +1103,23 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `<div class="stack" style="gap:16px"><div class="between"><h2 class="h">Cleaning</h2><span class="small muted">${esc(this._scopeText())}</span></div>${this._cleaningControls()}</div>`;
     }
 
+    /* On Beep-0 the `washing` attribute stays false during a mop wash; the reliable signal is the
+       `vacuum_state` attribute (washing / washing_paused), while HA's own state reads cleaning / paused. */
+    _dockFlags() {
+      const a = this._a;
+      const vs = String(a.vacuum_state || '');
+      const washingPaused = !!a.washing_paused || vs === 'washing_paused';
+      const washing = !washingPaused && (!!a.washing || vs === 'washing');
+      const drying = !!a.drying || vs === 'drying';
+      return { washing, washingPaused, drying, busy: washing || washingPaused || drying };
+    }
+
     _dockState() {
       const a = this._a;
-      if (a.washing) return 'Washing mops';
-      if (a.drying) {
+      const f = this._dockFlags();
+      if (f.washingPaused) return 'Mop wash paused';
+      if (f.washing) return 'Washing mops';
+      if (f.drying) {
         const left = num(a.drying_left ?? this._live('sensor', 'drying_left')?.state);
         return `Drying mops${left ? ` · ${left} min left` : ''}`;
       }
@@ -1007,10 +1158,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         acts.push(`<button class="tile ${busy ? 'on' : ''}" data-a="press" data-e="${empty}" ${busy ? 'disabled' : ''}>${ic('mdi:delete-empty-outline')}${busy ? 'Emptying…' : 'Empty bin'}</button>`);
       }
       const wash = this._id('button', 'self_clean') || this._id('button', 'start_washing');
-      if (wash) acts.push(`<button class="tile ${a.washing ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${!!a.washing}">${ic('mdi:water-sync')}${a.washing ? 'Pause wash' : 'Wash mops'}</button>`);
+      const fl = this._dockFlags();
+      if (wash) acts.push(`<button class="tile ${fl.washing || fl.washingPaused ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${fl.washing || fl.washingPaused}">${ic('mdi:water-sync')}${fl.washingPaused ? 'Resume wash' : fl.washing ? 'Pause wash' : 'Wash mops'}</button>`);
       const dry = this._id('button', 'manual_drying') || this._id('button', 'start_drying');
       if (dry) acts.push(`<button class="tile ${a.drying ? 'on' : ''}" data-a="press" data-e="${a.drying && this._id('button', 'stop_drying') ? this._id('button', 'stop_drying') : dry}" aria-pressed="${!!a.drying}">${ic('mdi:heat-wave')}${a.drying ? 'Stop drying' : 'Dry mops'}</button>`);
-      return acts.length ? `<div class="grid3">${acts.join('')}</div>` : '';
+      // Pause/Resume is one toggle button, so a running or paused wash gets its own clear Stop.
+      // vacuum.stop ends the wash task (confirmed on Beep-0); the tile only toggles pause.
+      const stopWash = fl.washing || fl.washingPaused
+        ? `<button class="btn stopwash" data-a="svc" data-v="stop" style="width:100%;margin-bottom:10px">${ic('mdi:stop-circle-outline')}Stop wash</button>` : '';
+      return acts.length ? `${stopWash}<div class="grid3">${acts.join('')}</div>` : stopWash;
     }
 
     _dockBlock(phone) {
@@ -1056,7 +1212,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (u.target === 'zone') {
         if (!u.zone) return 'Drag on the map to draw a zone';
         const w = Math.abs(u.zone[2] - u.zone[0]) / 1000, h = Math.abs(u.zone[3] - u.zone[1]) / 1000;
-        return `Zone ${w.toFixed(1)} × ${h.toFixed(1)} m<button data-a="clearsel">Clear</button>`;
+        return `Zone ${this._dim(w, h)}<button data-a="clearsel">Clear</button>`;
       }
       if (u.target === 'spot') return u.spot ? 'Spot placed · tap elsewhere to move it<button data-a="clearsel">Clear</button>' : 'Tap the map to place a spot';
       return '';
@@ -1098,12 +1254,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return html;
     }
 
+    /** Zone size in the user's unit system (map coordinates are millimetres). */
+    _dim(wm, hm) {
+      const us = this._hass.config?.unit_system;
+      if (us?.length === 'mi' || us?.area === 'ft²') return `${(wm * 3.28084).toFixed(1)} × ${(hm * 3.28084).toFixed(1)} ft`;
+      return `${wm.toFixed(1)} × ${hm.toFixed(1)} m`;
+    }
+
     _zoneBox(z) {
       const p0 = this._pctPos(z[0], z[1]), p1 = this._pctPos(z[2], z[3]);
       const l = Math.min(p0.l, p1.l), t = Math.min(p0.t, p1.t);
       const w = Math.abs(p1.l - p0.l), h = Math.abs(p1.t - p0.t);
       const mw = Math.abs(z[2] - z[0]) / 1000, mh = Math.abs(z[3] - z[1]) / 1000;
-      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${mw.toFixed(1)} × ${mh.toFixed(1)} m · ${this._ui.passes}×</span></div>`;
+      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${this._dim(mw, mh)} · ${this._ui.passes}×</span></div>`;
     }
 
     _pop() {
@@ -1133,7 +1296,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const s = this._status();
       const bat = this._battery();
       const n = this._notes().length;
-      return `<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
+      const nav = this._haNav('fab');
+      return `${nav}<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
           <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
           <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
         <button class="fab ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts, ${n} new">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>
@@ -1142,7 +1306,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _toast() {
       if (this._ui.pop) return '';
-      const notes = this._notes();
+      // Consumable upkeep (cons_*) lives in the bell badge only; the banner is for faults and problems.
+      const notes = this._notes().filter((x) => !x.id.startsWith('cons_'));
       if (!notes.length) return '';
       const n = notes[0];
       return `<button class="toast ${n.level === 'crit' ? 'crit' : ''}" data-a="pop" data-v="care">${ic(n.icon, `style="--mdc-icon-size:18px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})"`)}
@@ -1157,7 +1322,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (g && !/^off$/i.test(g.value)) parts.push(`CleanGenius ${lab(g)}`);
       else {
         const su = this._select('suction_level'); if (su) parts.push(lab(su));
-        const hu = this._select('mop_pad_humidity') || this._select('water_volume'); if (hu) parts.push(this._opt(hu.so, hu.value, false));
+        const hu = this._select('mop_pad_humidity') || this._select('water_volume'); if (this._wet()) parts.push(this._wet().name); else if (hu) parts.push(this._opt(hu.so, hu.value, false));
       }
       if (this._ui.target !== 'all') parts.push(`${this._ui.passes}×`);
       return parts.join(' · ');
@@ -1166,7 +1331,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _sheet() {
       const u = this._ui;
       const dockTab = u.sheetTab === 'dock';
-      const dockShort = this._a.washing || this._a.drying || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready';
+      const dockShort = this._dockFlags().busy || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready';
       const tabs = `<div class="grab"></div><div class="stabs" role="tablist">
         <button role="tab" class="${!dockTab ? 'on' : ''}" aria-selected="${!dockTab}" data-a="sheettab" data-v="clean">${ic('mdi:robot-vacuum')}Clean</button>
         <button role="tab" class="${dockTab ? 'on' : ''}" aria-selected="${dockTab}" data-a="sheettab" data-v="dock">${ic('mdi:home-lightning-bolt-outline')}Dock<span class="xs muted" style="font-weight:400">· ${dockShort}</span></button></div>`;
@@ -1185,7 +1350,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _phoneHead() {
       const v = this._views().find((x) => x[0] === this._ui.view);
       return `<button class="ibtn" data-a="view" data-v="clean" aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow" style="font-size:18px">${esc(v ? v[1] : '')}</h1>
-        <button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
+        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}<button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
     }
 
     /* ---------- full views ---------- */
@@ -1224,7 +1389,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (d === 'number') {
         const at = s.attributes;
         const unit = at.unit_of_measurement || '';
-        return `<div class="row"><span class="name">${name}</span><label class="range"><input type="range" min="${at.min ?? 0}" max="${at.max ?? 100}" step="${at.step ?? 1}" value="${esc(s.state)}" data-a="num" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}><span>${esc(s.state)}${esc(unit)}</span></label></div>`;
+        return `<div class="row"><span class="name">${name}</span><label class="range"><input type="range" min="${at.min ?? 0}" max="${at.max ?? 100}" step="${at.step ?? 1}" value="${esc(s.state)}" data-a="num" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}><span>${esc(this._numLabel(s.state, unit))}</span></label></div>`;
       }
       if (d === 'time') {
         return `<div class="row"><span class="name">${name}</span><input class="time" type="time" value="${esc(String(s.state).slice(0, 5))}" data-a="time" data-e="${id}" aria-label="${name}" ${off ? 'disabled' : ''}></div>`;
@@ -1239,6 +1404,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return `<div class="row"><span class="name">${name}</span><span class="val">${esc(this._fmt(s))}${u && !this._hass.formatEntityState ? ` ${esc(u)}` : ''}</span></div>`;
       }
       return '';
+    }
+
+    /* HA converts sensor units to the user's unit system, but number entities keep the
+       integration's native unit. Convert area for display only; the slider stays native. */
+    _numLabel(v, unit) {
+      const us = this._hass.config?.unit_system;
+      if (unit === 'm²' && (us?.area === 'ft²' || us?.length === 'mi')) return `${Math.round(Number(v) * 10.7639)} ft²`;
+      return `${v}${unit}`;
     }
 
     _group(title, icon, ids) {
@@ -1256,8 +1429,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _dockView() {
       const a = this._a;
       const lay = this._layout();
-      const ids = this._keysFor(DOCK_KEYS);
-      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'], ['button']);
+      const c = this._config;
+      const ids = this._keysFor(DOCK_KEYS.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling));
+      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'].filter((k) => k !== 'water_tank_draining' || c.show_water_tank_draining), ['button']);
       return `${this._viewHead('Dock', this._dockState())}
         <div style="display:grid;grid-template-columns:${lay === 'desktop' ? 'minmax(320px,420px) minmax(0,1fr)' : '1fr'};gap:12px;align-items:start">
           <div class="stack"><section class="panel pad">${this._dockBlock(lay === 'phone')}</section>
@@ -1320,7 +1494,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(id) && !skip.has(key);
       }).map(([, id]) => id);
       groups.push(this._group('Other', 'mdi:dots-horizontal', other));
-      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k)).map(([, id]) => id);
+      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k) && (k !== 'button.water_tank_draining' || this._config.show_water_tank_draining)).map(([, id]) => id);
       groups.push(this._group('Actions', 'mdi:play-box-outline', actions));
       groups.push(this._roomSettings());
       return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}<div class="cols">${groups.filter(Boolean).join('')}</div>`;
@@ -1375,11 +1549,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `<div class="stack" style="gap:18px">
         <div><h1 class="h-xl">Remote control</h1><div class="small muted" style="margin-top:4px">Press and hold to drive. Obstacle sensors stay on.</div></div>
         <div class="dpad" role="group" aria-label="Direction pad">
-          <button style="top:10px;left:calc(50% - 36px)" data-hold="fwd" aria-label="Forward">${ic('mdi:arrow-up-bold')}</button>
-          <button style="bottom:10px;left:calc(50% - 36px)" data-hold="back" aria-label="Backward">${ic('mdi:arrow-down-bold')}</button>
-          <button style="top:calc(50% - 36px);left:10px" data-hold="left" aria-label="Turn left">${ic('mdi:rotate-left')}</button>
-          <button style="top:calc(50% - 36px);right:10px" data-hold="right" aria-label="Turn right">${ic('mdi:rotate-right')}</button>
-          <button class="c" style="top:calc(50% - 36px);left:calc(50% - 36px)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
+          <button style="top:10px;left:calc(50% - var(--b) / 2)" data-hold="fwd" aria-label="Forward">${ic('mdi:arrow-up-bold')}</button>
+          <button style="bottom:10px;left:calc(50% - var(--b) / 2)" data-hold="back" aria-label="Backward">${ic('mdi:arrow-down-bold')}</button>
+          <button style="top:calc(50% - var(--b) / 2);left:10px" data-hold="left" aria-label="Turn left">${ic('mdi:rotate-left')}</button>
+          <button style="top:calc(50% - var(--b) / 2);right:10px" data-hold="right" aria-label="Turn right">${ic('mdi:rotate-right')}</button>
+          <button class="c" style="top:calc(50% - var(--b) / 2);left:calc(50% - var(--b) / 2)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
         </div>
         <div class="stack-s"><span class="lbl">Speed</span><div class="seg" role="group" aria-label="Speed">${[['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']].map(([id, l]) => `<button class="${sp === id ? 'on' : ''}" aria-pressed="${sp === id}" data-a="speed" data-v="${id}">${l}</button>`).join('')}</div></div>
         <div class="rowf"><button class="btn" style="flex:1" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}Send to dock</button></div>
@@ -1407,6 +1581,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         case 'clearsel': u.zone = null; u.spot = null; break;
         case 'sheettab': u.sheetTab = v; break;
         case 'sheet': u.sheetOpen = !u.sheetOpen; break;
+        case 'nav':
+          if (v === 'back') history.back();
+          else if (v === 'menu') this.dispatchEvent(new CustomEvent('hass-toggle-menu', { bubbles: true, composed: true }));
+          break;
         case 'pop': u.pop = u.pop === v ? null : v; break;
         case 'closepop': u.pop = null; break;
         case 'hist': u.hist = Number(v); break;
@@ -1499,23 +1677,39 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._schedule();
     }
 
+    _move(rotation, velocity) {
+      return this._call('dreame_vacuum', 'vacuum_remote_control_move_step', { entity_id: this._config.entity, rotation, velocity }, true);
+    }
+
     _startHold(btn) {
       this._stopHold();
       const dir = btn.dataset.hold;
       const vel = { slow: 100, normal: 200, fast: 300 }[this._ui.speed] || 200;
-      const cmd = { fwd: [0, vel], back: [0, -vel], left: [64, 0], right: [-64, 0] }[dir];
+      // rotation is an angular speed (spdw), so turns scale with the speed setting and stay gentle
+      const rot = { slow: 20, normal: 32, fast: 48 }[this._ui.speed] || 32;
+      const cmd = { fwd: [0, vel], back: [0, -vel], left: [rot, 0], right: [-rot, 0] }[dir];
       if (!cmd) return;
       btn.classList.add('held');
-      const send = () => this._call('dreame_vacuum', 'vacuum_remote_control_move_step', { entity_id: this._config.entity, rotation: cmd[0], velocity: cmd[1] }, true);
-      send();
-      this._hold = { btn, t: setInterval(send, 450) };
+      const hold = { btn, dead: false, t: null };
+      this._hold = hold;
+      // Wait for each step to finish before sending the next. Firing on a fixed timer queues
+      // commands faster than the robot runs them, so it keeps rolling after release.
+      const tick = async () => {
+        if (hold.dead) return;
+        await this._move(cmd[0], cmd[1]);
+        if (!hold.dead) hold.t = setTimeout(tick, 100);
+      };
+      tick();
     }
 
     _stopHold() {
-      if (!this._hold) return;
-      clearInterval(this._hold.t);
-      this._hold.btn.classList.remove('held');
+      const hold = this._hold;
+      if (!hold) return;
+      hold.dead = true;
+      clearTimeout(hold.t);
+      hold.btn.classList.remove('held');
       this._hold = null;
+      this._move(0, 0); // explicit stop step
     }
 
     /* ---------- actions ---------- */
@@ -1532,7 +1726,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return this._call('dreame_vacuum', 'vacuum_clean_zone', { entity_id: ent, zone: [u.zone], repeats: u.passes });
       }
       if (u.target === 'spot' && u.spot) {
-        return this._call('dreame_vacuum', 'vacuum_clean_spot', { entity_id: ent, points: [u.spot], repeats: u.passes });
+        // The robot accepts vacuum_clean_spot but aborts and returns to the dock (seen on Beep-0,
+        // firmware 1639), so spot cleaning is sent as a small zone clean (about 1.2 m square, the
+        // same ~1.5 m2 patch a native spot cleans), which this robot runs reliably.
+        const half = 600;
+        const zone = [u.spot[0] - half, u.spot[1] - half, u.spot[0] + half, u.spot[1] + half];
+        return this._call('dreame_vacuum', 'vacuum_clean_zone', { entity_id: ent, zone: [zone], repeats: u.passes });
       }
       if (u.target === 'all') return this._call('vacuum', 'start', { entity_id: ent });
       return null;
