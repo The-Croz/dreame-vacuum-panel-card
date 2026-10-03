@@ -526,10 +526,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const err = st === 'error' || !!a.has_error && st === 'error';
       const ss = this._live('sensor', 'status');
       let text = ss ? this._fmt(ss) : (human(a.status) || this._fmt(v));
+      const fl = this._dockFlags();
+      if (fl.washingPaused) text = 'Mop wash paused';
+      else if (fl.washing) text = 'Washing mops';
       const room = this._live('sensor', 'current_room')?.state;
       if ((running || paused) && room) text += ` · ${room}`;
       let dot = '';
       if (st === 'error') dot = 'err';
+      else if (fl.washingPaused) dot = 'warn';
       else if (running) dot = 'ok';
       else if (paused || st === 'returning') dot = 'warn';
       return { running, paused, err, text, dot, state: st };
@@ -1080,10 +1084,23 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `<div class="stack" style="gap:16px"><div class="between"><h2 class="h">Cleaning</h2><span class="small muted">${esc(this._scopeText())}</span></div>${this._cleaningControls()}</div>`;
     }
 
+    /* On Beep-0 the `washing` attribute stays false during a mop wash; the reliable signal is the
+       `vacuum_state` attribute (washing / washing_paused), while HA's own state reads cleaning / paused. */
+    _dockFlags() {
+      const a = this._a;
+      const vs = String(a.vacuum_state || '');
+      const washingPaused = !!a.washing_paused || vs === 'washing_paused';
+      const washing = !washingPaused && (!!a.washing || vs === 'washing');
+      const drying = !!a.drying || vs === 'drying';
+      return { washing, washingPaused, drying, busy: washing || washingPaused || drying };
+    }
+
     _dockState() {
       const a = this._a;
-      if (a.washing) return 'Washing mops';
-      if (a.drying) {
+      const f = this._dockFlags();
+      if (f.washingPaused) return 'Mop wash paused';
+      if (f.washing) return 'Washing mops';
+      if (f.drying) {
         const left = num(a.drying_left ?? this._live('sensor', 'drying_left')?.state);
         return `Drying mops${left ? ` · ${left} min left` : ''}`;
       }
@@ -1122,7 +1139,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         acts.push(`<button class="tile ${busy ? 'on' : ''}" data-a="press" data-e="${empty}" ${busy ? 'disabled' : ''}>${ic('mdi:delete-empty-outline')}${busy ? 'Emptying…' : 'Empty bin'}</button>`);
       }
       const wash = this._id('button', 'self_clean') || this._id('button', 'start_washing');
-      if (wash) acts.push(`<button class="tile ${a.washing ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${!!a.washing}">${ic('mdi:water-sync')}${a.washing ? 'Pause wash' : 'Wash mops'}</button>`);
+      const fl = this._dockFlags();
+      if (wash) acts.push(`<button class="tile ${fl.washing || fl.washingPaused ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${fl.washing || fl.washingPaused}">${ic('mdi:water-sync')}${fl.washingPaused ? 'Resume wash' : fl.washing ? 'Pause wash' : 'Wash mops'}</button>`);
       const dry = this._id('button', 'manual_drying') || this._id('button', 'start_drying');
       if (dry) acts.push(`<button class="tile ${a.drying ? 'on' : ''}" data-a="press" data-e="${a.drying && this._id('button', 'stop_drying') ? this._id('button', 'stop_drying') : dry}" aria-pressed="${!!a.drying}">${ic('mdi:heat-wave')}${a.drying ? 'Stop drying' : 'Dry mops'}</button>`);
       return acts.length ? `<div class="grid3">${acts.join('')}</div>` : '';
@@ -1282,7 +1300,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _sheet() {
       const u = this._ui;
       const dockTab = u.sheetTab === 'dock';
-      const dockShort = this._a.washing || this._a.drying || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready';
+      const dockShort = this._dockFlags().busy || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready';
       const tabs = `<div class="grab"></div><div class="stabs" role="tablist">
         <button role="tab" class="${!dockTab ? 'on' : ''}" aria-selected="${!dockTab}" data-a="sheettab" data-v="clean">${ic('mdi:robot-vacuum')}Clean</button>
         <button role="tab" class="${dockTab ? 'on' : ''}" aria-selected="${dockTab}" data-a="sheettab" data-v="dock">${ic('mdi:home-lightning-bolt-outline')}Dock<span class="xs muted" style="font-weight:400">· ${dockShort}</span></button></div>`;
