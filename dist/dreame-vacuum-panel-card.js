@@ -137,6 +137,7 @@ button{font-family:inherit;color:inherit}
 .btn:hover{background:var(--dv-bg2)}
 .btn.pri{background:var(--dv-pbtn);color:#fff;border-color:transparent}
 .btn.pri:hover{filter:brightness(1.08)}
+.btn.stopwash{border-color:var(--dv-err);color:var(--dv-errt);background:var(--dv-errbg);min-height:48px}
 .btn.sm{min-height:36px;border-radius:18px;font-size:13px;padding:0 12px}
 .btn.ghost{border-color:transparent;background:transparent;color:var(--dv-text2)}
 .btn.sq{width:48px;padding:0}
@@ -1150,7 +1151,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (wash) acts.push(`<button class="tile ${fl.washing || fl.washingPaused ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${fl.washing || fl.washingPaused}">${ic('mdi:water-sync')}${fl.washingPaused ? 'Resume wash' : fl.washing ? 'Pause wash' : 'Wash mops'}</button>`);
       const dry = this._id('button', 'manual_drying') || this._id('button', 'start_drying');
       if (dry) acts.push(`<button class="tile ${a.drying ? 'on' : ''}" data-a="press" data-e="${a.drying && this._id('button', 'stop_drying') ? this._id('button', 'stop_drying') : dry}" aria-pressed="${!!a.drying}">${ic('mdi:heat-wave')}${a.drying ? 'Stop drying' : 'Dry mops'}</button>`);
-      return acts.length ? `<div class="grid3">${acts.join('')}</div>` : '';
+      // Pause/Resume is one toggle button, so a running or paused wash gets its own clear Stop.
+      // vacuum.stop ends the wash task (confirmed on Beep-0); the tile only toggles pause.
+      const stopWash = fl.washing || fl.washingPaused
+        ? `<button class="btn stopwash" data-a="svc" data-v="stop" style="width:100%;margin-bottom:10px">${ic('mdi:stop-circle-outline')}Stop wash</button>` : '';
+      return acts.length ? `${stopWash}<div class="grid3">${acts.join('')}</div>` : stopWash;
     }
 
     _dockBlock(phone) {
