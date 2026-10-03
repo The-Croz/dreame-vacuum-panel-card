@@ -1015,7 +1015,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const min = Number(st.attributes.min ?? 1), max = Number(st.attributes.max ?? 32);
       const v = Number(st.state);
       const third = Math.max(0, Math.min(2, Math.floor((v - min) / ((max - min + 1) / 3))));
-      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third, name: WET_NAMES[third] };
+      // The robot decides where the level bands start (observed: not exact thirds), so prefer
+      // the humidity select, which the integration derives from the same value.
+      const hs = this._live('select', 'mop_pad_humidity');
+      const idx = hs ? ['slightly_dry', 'moist', 'wet'].indexOf(hs.state) : -1;
+      const band = idx >= 0 ? idx : third;
+      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third: band, name: WET_NAMES[band] };
     }
 
     _wetControl(dis) {
