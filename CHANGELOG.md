@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2
+
+- **Native rounded corners.** Radii now come from Home Assistant's own tokens
+  (`--ha-card-border-radius`, `--ha-border-radius-*`), so panels, tiles, popovers, the phone
+  sheet and zone boxes match the default look and follow your theme. Buttons, chips and
+  pills are fully round like HA's own buttons.
+- **Full-screen mode floats like a card.** It now sits inside a small gutter with rounded
+  corners and a border instead of a square slab pinned to the screen edges.
+- **Scrolling columns** are clipped at the card edge, so panels no longer end in a flat cut
+  mid-gutter.
+
 ## 0.2.1
 
 - **Edit mode.** Full-screen mode now steps aside while the dashboard is in edit mode, so
