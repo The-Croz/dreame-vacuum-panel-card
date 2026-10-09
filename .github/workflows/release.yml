@@ -1,6 +1,10 @@
 name: Release
 
+# Push a tag like v0.3.1 to publish a release with the card attached and that version's
+# changelog as its notes. Releases made by hand in GitHub get the card attached too.
 on:
+  push:
+    tags: ['v*']
   release:
     types: [published]
 
@@ -8,8 +12,27 @@ permissions:
   contents: write
 
 jobs:
+  publish:
+    name: Publish release from tag
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the card version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          card=$(grep -oP "const VERSION = '\K[^']+" dist/dreame-vacuum-panel-card.js)
+          [ "$tag" = "$card" ] || { echo "Tag $GITHUB_REF_NAME does not match card version $card"; exit 1; }
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" '$0 == "## " v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/dreame-vacuum-panel-card.js --title "$GITHUB_REF_NAME" --notes-file notes.md
+
   upload:
     name: Attach card to release
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

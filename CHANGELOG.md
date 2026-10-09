@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- **New screenshots** of the 0.3.0 layout, with more in a "More screenshots" section. Images
+  use full URLs so they show up inside HACS.
+- **Troubleshooting** notes for settings under System › More and for parts that are hidden.
+- No changes to the card itself.
+
 ## 0.3.0
 
 - **Settings menu.** Settings are now a menu like Home Assistant's own: Cleaning, Mopping,
