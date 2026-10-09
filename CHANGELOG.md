@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0
+
+- **Settings menu.** Settings are now a menu like Home Assistant's own: Cleaning, Mopping,
+  Carpet, Dock, Obstacle avoidance, Rooms, Maps, Schedule, Voice & sound, System and
+  Maintenance, each split into short titled sections. Desktop and tablet show the menu and
+  the open category side by side; on a phone each category opens as its own screen with a
+  back arrow. Categories your robot has nothing for are hidden.
+- **Rooms settings** pick the room with chips, and list each room's settings in a fixed order
+  (mode, suction, wetness, route, passes, order, floor).
+- Toggling a setting no longer scrolls the settings pane back to the top.
+- **Dock & care on one page.** The Dock and Care pages are merged. Dock status, actions,
+  settings and tools sit next to parts and lifetime totals, without the repeated status line
+  and the separate drying panel.
+- **Status bar.** The state is larger, the suction and wetness summary is gone (it is already
+  in the Cleaning panel), and the "1 care alert" chip is now the same bell with a badge that
+  the phone layout uses.
+- **Dock levels** are an even grid (2 × 2 for four) with an icon for each level.
+- **Wetness** labels no longer have bars over them; the current band is highlighted.
+- **Parts your robot doesn't have are hidden.** Some models report parts they lack (an
+  L20 Ultra lists a silver-ion module). The card now lists only parts that have a sensor.
+
 ## 0.2.3
 
 - **Corners stay rounded under any theme.** 0.2.2 read Home Assistant's radius variables, and a

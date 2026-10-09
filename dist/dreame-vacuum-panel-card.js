@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.2.3';
+  const VERSION = '0.3.0';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -65,16 +65,56 @@
   const RESET_NAME = { sensor_dirty: 'sensor' };
 
   // Keys used by the cleaning controls (kept out of the generic settings lists)
-  const CLEAN_KEYS = ['cleaning_mode', 'suction_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleangenius', 'customized_cleaning', 'selected_map'];
+  const CLEAN_KEYS = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleangenius', 'customized_cleaning', 'selected_map'];
   const DOCK_KEYS = ['self_clean', 'self_clean_area', 'self_clean_by_zone', 'self_clean_frequency', 'mop_wash_level', 'auto_rewashing', 'auto_drying', 'drying_time', 'auto_empty_mode', 'auto_dust_collecting', 'auto_empty_frequency', 'auto_water_refilling', 'auto_add_detergent', 'water_electrolysis', 'mop_clean_frequency', 'washing_mode', 'water_temperature', 'smart_mop_washing', 'smart_drying', 'hot_washing'];
-  const GROUPS = [
-    ['cleaning', 'Cleaning', 'mdi:broom', ['resume_cleaning', 'cleaning_sequence', 'collision_avoidance', 'floor_direction_cleaning', 'gap_cleaning_extension', 'max_suction_power', 'auto_recleaning', 'intelligent_recognition', 'side_reach', 'cleaning_times']],
-    ['mopping', 'Mopping', 'mdi:water-outline', ['tight_mopping', 'auto_mount_mop', 'mopping_under_furnitures', 'mop_pad_swing', 'wetness_level', 'mop_extend', 'mop_extend_frequency', 'stain_avoidance', 'mopping_type', 'mop_pressure', 'mop_temperature', 'uv_sterilization']],
-    ['carpet', 'Carpet', 'mdi:rug', ['carpet_boost', 'carpet_recognition', 'carpet_avoidance', 'carpet_cleaning', 'carpet_sensitivity', 'intensive_carpet_cleaning', 'clean_carpets_first']],
-    ['ai', 'Obstacle avoidance', 'mdi:eye-outline', ['obstacle_avoidance', 'ai_obstacle_detection', 'ai_obstacle_picture', 'ai_obstacle_image_upload', 'ai_pet_detection', 'ai_human_detection', 'ai_furniture_detection', 'ai_fluid_detection', 'fuzzy_obstacle_detection', 'pet_picture', 'pet_focused_detection', 'pet_focused_cleaning', 'fill_light', 'human_follow', 'camera_light_brightness', 'camera_light_brightness_auto']],
-    ['quiet', 'Schedule & sound', 'mdi:volume-high', ['dnd', 'dnd_start', 'dnd_end', 'volume', 'voice_assistant', 'voice_assistant_language', 'streaming_voice_prompt', 'off_peak_charging', 'off_peak_charging_start', 'off_peak_charging_end']],
-    ['general', 'General', 'mdi:cog-outline', ['child_lock', 'multi_floor_map', 'map_saving', 'map_rotation']],
+  // Settings menu: [id, title, icon, description, sections]. Categories are split into titled sections. Keys a robot lacks are skipped,
+  // and a category with nothing left is hidden. Anything unlisted lands in System › More.
+  const SETTINGS = [
+    ['cleaning', 'Cleaning', 'mdi:broom', 'Recleaning, sequence, edges and gaps', [
+      ['Behavior', ['resume_cleaning', 'cleaning_sequence', 'auto_recleaning', 'cleaning_times', 'intelligent_recognition', 'max_suction_power']],
+      ['Edges & gaps', ['collision_avoidance', 'floor_direction_cleaning', 'gap_cleaning_extension', 'side_reach']],
+    ]],
+    ['mopping', 'Mopping', 'mdi:water-outline', 'Mop pads, lifting and where to mop', [
+      ['Mop pads', ['mop_pad_swing', 'mop_extend', 'mop_extend_frequency', 'auto_mount_mop', 'mopping_type', 'mop_pressure', 'mop_temperature', 'tight_mopping', 'uv_sterilization']],
+      ['Where to mop', ['mopping_under_furnitures', 'stain_avoidance']],
+    ]],
+    ['carpet', 'Carpet', 'mdi:rug', 'Boost, recognition and carpet handling', [
+      [null, ['carpet_boost', 'carpet_recognition', 'carpet_sensitivity', 'carpet_avoidance', 'carpet_cleaning', 'intensive_carpet_cleaning', 'clean_carpets_first']],
+    ]],
+    ['dock', 'Dock', 'mdi:home-lightning-bolt-outline', 'Mop washing, drying and emptying', [
+      ['Mop washing', ['self_clean', 'self_clean_area', 'self_clean_by_zone', 'self_clean_frequency', 'mop_clean_frequency', 'mop_wash_level', 'auto_rewashing', 'washing_mode', 'water_temperature', 'smart_mop_washing', 'hot_washing']],
+      ['Drying', ['auto_drying', 'drying_time', 'smart_drying']],
+      ['Emptying & water', ['auto_empty_mode', 'auto_dust_collecting', 'auto_empty_frequency', 'auto_water_refilling', 'auto_add_detergent', 'water_electrolysis']],
+    ]],
+    ['ai', 'Obstacle avoidance', 'mdi:eye-outline', 'Detection, pets and camera', [
+      ['Detection', ['obstacle_avoidance', 'ai_obstacle_detection', 'fuzzy_obstacle_detection', 'ai_furniture_detection', 'ai_fluid_detection', 'ai_human_detection', 'human_follow']],
+      ['Pets', ['ai_pet_detection', 'pet_focused_detection', 'pet_focused_cleaning', 'pet_picture']],
+      ['Camera & photos', ['ai_obstacle_picture', 'ai_obstacle_image_upload', 'fill_light', 'camera_light_brightness_auto', 'camera_light_brightness']],
+    ]],
+    ['rooms', 'Rooms', 'mdi:floor-plan', 'Per-room suction, water, route and order', []],
+    ['maps', 'Maps', 'mdi:map-outline', 'Floors, saving and rotation', [
+      [null, ['multi_floor_map', 'map_saving', 'map_rotation']],
+    ]],
+    ['schedule', 'Schedule', 'mdi:clock-outline', 'Do not disturb and off-peak charging', [
+      ['Do not disturb', ['dnd', 'dnd_start', 'dnd_end']],
+      ['Off-peak charging', ['off_peak_charging', 'off_peak_charging_start', 'off_peak_charging_end']],
+    ]],
+    ['sound', 'Voice & sound', 'mdi:volume-high', 'Volume, voice prompts and language', [
+      [null, ['volume', 'voice_assistant', 'voice_assistant_language', 'streaming_voice_prompt']],
+    ]],
+    ['system', 'System', 'mdi:cog-outline', 'Child lock and other settings', [
+      ['Safety', ['child_lock']],
+    ]],
+    ['maint', 'Maintenance', 'mdi:wrench-outline', 'Mapping, dock tools and backups', []],
   ];
+  // Buttons for Maintenance, by section; other buttons go to More.
+  const MAINT = [
+    ['Mapping', ['start_mapping', 'start_fast_mapping', 'backup_saved_map']],
+    ['Dock', ['base_station_cleaning', 'base_station_self_repair', 'water_tank_draining']],
+    ['Cleaning', ['start_recleaning']],
+  ];
+  // Buttons the card already offers elsewhere (dock tiles, care resets, warnings).
+  const HIDDEN_BTN = /^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/;
   const DESTRUCTIVE = ['start_mapping', 'start_fast_mapping', 'base_station_self_repair', 'water_tank_draining', 'backup_saved_map', 'start_recleaning'];
 
   /* ------------------------------------------------------------------ */
@@ -187,9 +227,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .range input{flex:1;accent-color:var(--dv-pbtn);height:28px}
 .wet{width:100%;accent-color:var(--dv-pbtn);height:28px;margin:0}
 .thirds{display:flex;font-size:12px;color:var(--dv-text2);text-align:center;margin-top:2px}
-.thirds span{min-width:0;border-top:3px solid var(--dv-div);padding-top:3px}
-.thirds span+span{margin-left:2px}
-.thirds .on{border-top-color:var(--dv-p)}
+.thirds span{min-width:0;padding-top:2px}
 .thirds .on{color:var(--dv-pt);font-weight:600}
 .range span{font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
 /* map */
@@ -227,25 +265,47 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .alert{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--dv-r);background:var(--dv-warnbg);border:0;width:100%;text-align:left;cursor:pointer;color:var(--dv-text)}
 .alert.crit{background:var(--dv-errbg)}
 /* levels */
-.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
-.lv{padding:8px 10px;border-radius:var(--dv-r-md);background:var(--dv-bg2);font-size:12px;min-width:0}
-.lv b{display:block;font-weight:500;margin-top:2px;font-size:13px}
+.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.levels.n1{grid-template-columns:1fr}
+.levels.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.lv{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--dv-r-md);background:var(--dv-bg2);font-size:12px;min-width:0}
+.lv ha-icon{--mdc-icon-size:20px;color:var(--dv-text2)}
+.lv>span{min-width:0}
+.lv b{display:block;font-weight:500;margin-top:1px;font-size:14px;color:var(--dv-text)}
+.lv.warn ha-icon{color:var(--dv-warnt)}.lv.err ha-icon{color:var(--dv-errt)}.lv.ok ha-icon{color:var(--dv-ok)}
 .lv.warn{background:var(--dv-warnbg)}.lv.warn b{color:var(--dv-warnt)}
 .lv.err{background:var(--dv-errbg)}.lv.err b{color:var(--dv-errt)}
 .lv.ok b{color:var(--dv-ok)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 /* care */
-.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.ring{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
-.ring>span{width:52px;height:52px;border-radius:50%;background:var(--dv-bg);display:grid;place-items:center;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
-.stat b{display:block;font-size:24px;font-weight:400;margin-top:4px}
+.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.part{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--dv-r-md);background:var(--dv-bg2);min-width:0}
+.ring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.ring>span{width:42px;height:42px;border-radius:50%;background:var(--dv-bg2);display:grid;place-items:center;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
 /* settings */
-.cols{columns:340px;column-gap:12px}
-.cols>.panel{break-inside:avoid;margin-bottom:12px;display:block}
 .grp{padding:6px 18px 10px}
 .grp-h{display:flex;align-items:center;gap:10px;padding:12px 0 6px}
 .grp-h ha-icon{color:var(--dv-pt)}
+.sset{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:12px;flex:1 1 auto;min-height:0}
+.sset>*{overflow:auto;min-height:0}
+.slist{padding:6px;display:flex;flex-direction:column;gap:2px;align-self:start;max-height:100%}
+.sitem{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;border:0;border-radius:var(--dv-r-md);background:transparent;padding:8px 10px;cursor:pointer;text-align:left;color:var(--dv-text)}
+.sitem:hover{background:var(--dv-bg2)}
+.sitem.on{background:var(--dv-tint)}
+.sitem .sic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--dv-tint);color:var(--dv-pt)}
+.sitem.on .sic{background:var(--dv-pbtn);color:#fff}
+.sitem b{display:block;font-size:15px;font-weight:500}
+.sitem .xs{display:block}
+.sitem>ha-icon:last-child{color:var(--dv-text2)}
+.ph .slist{max-height:none}
+.ph .sitem+.sitem{border-top:1px solid var(--dv-div);border-radius:0}
+.sdet{display:flex;flex-direction:column;gap:18px;padding:2px 2px 12px}
+.sdet>*{width:100%;max-width:820px}
+.sdh{display:flex;align-items:center;gap:14px;padding:6px 4px 0}
+.sdh .sic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--dv-tint);color:var(--dv-pt)}
+.ssec{display:flex;flex-direction:column;gap:8px}
+.ssec>.lbl{padding:0 6px}
+.ssec>.panel{padding:2px 18px}
 /* history */
 .hist{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:12px;height:100%;min-height:0}
 .hlist{overflow:auto;padding:8px}
@@ -290,9 +350,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .st .meta span{display:inline-flex;align-items:center;gap:6px}
 .st .meta ha-icon{--mdc-icon-size:16px}
 .st .meta b{color:var(--dv-text);font-weight:500}
-.carechip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--dv-warnt);background:var(--dv-warnbg);padding:0 12px;min-height:32px;border-radius:var(--dv-pill);border:0;cursor:pointer}
-.carechip.crit{color:var(--dv-errt);background:var(--dv-errbg)}
-.carechip ha-icon{--mdc-icon-size:16px}
+.st .state{display:inline-flex;align-items:center;gap:8px;font-size:17px;font-weight:500;color:var(--dv-text)}
+.st .state .dot{width:10px;height:10px}
+.ibtn.on{background:var(--dv-tint);color:var(--dv-pt)}
+.ibtn .badge{top:2px;right:2px}
 /* ---------- tablet ---------- */
 .tab{display:flex;flex-direction:column;height:100%}
 .tab-scroll{flex:1 1 auto;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px;min-height:0}
@@ -606,9 +667,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _consumables() {
       const a = this._a;
       const out = [];
+      // The integration reports some parts as attributes even on models without them (an L20 Ultra
+      // lists silver_ion_left but has no silver-ion module). It only creates a sensor for parts the
+      // robot has, so when this robot has part sensors, list only the parts that have one.
+      const hasSensors = Object.keys(this._map || {}).some((k) => /^sensor\.(?!drying_).+(?<!_time)_left$/.test(k));
       for (const [k, v] of Object.entries(a)) {
         if (!k.endsWith('_left') || k.endsWith('_time_left') || k === 'drying_left') continue;
         const key = k.slice(0, -5);
+        if (hasSensors && !this._id('sensor', k)) continue;
         const p = num(v);
         if (p === null) continue;
         const sens = this._live('sensor', `${key}_time_left`);
@@ -864,7 +930,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           const sc = el.querySelector('.chips');
           const left = sc ? sc.scrollLeft : 0;
           const scrollTop = el.scrollTop;
+          const keep = {};
+          el.querySelectorAll('[data-keep]').forEach((k) => { keep[k.dataset.keep] = k.scrollTop; });
           el.innerHTML = html;
+          el.querySelectorAll('[data-keep]').forEach((k) => { if (keep[k.dataset.keep]) k.scrollTop = keep[k.dataset.keep]; });
           this._regions[name] = html;
           const sc2 = el.querySelector('.chips');
           if (sc2) sc2.scrollLeft = left;
@@ -944,8 +1013,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _views() {
       return [
         ['clean', 'Clean', 'mdi:robot-vacuum'],
-        ['dock', 'Dock', 'mdi:home-lightning-bolt-outline'],
-        ['care', 'Care', 'mdi:wrench-outline'],
+        ['care', 'Dock & care', 'mdi:home-lightning-bolt-outline'],
         ['settings', 'Settings', 'mdi:tune-variant'],
         ['history', 'History', 'mdi:history'],
         ['remote', 'Remote', 'mdi:gamepad-variant-outline'],
@@ -996,11 +1064,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `<button class="${cls}" data-a="run" ${dis ? 'disabled' : ''} ${extra}>${ic(icon)}${label}</button>`;
     }
 
-    _careChip() {
-      const notes = this._notes();
-      if (!notes.length) return '';
-      const crit = notes.some((x) => x.level === 'crit');
-      return `<button class="carechip ${crit ? 'crit' : ''}" data-a="pop" data-v="care">${ic('mdi:bell-alert-outline')}${notes.length} care ${notes.length === 1 ? 'alert' : 'alerts'}</button>`;
+    /** Care alerts bell, the same one the phone layout shows. */
+    _bell(cls = 'ibtn') {
+      const n = this._notes().length;
+      return `<button class="${cls} ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts${n ? `, ${n} new` : ''}" title="Care alerts">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>`;
     }
 
     _statusBlock() {
@@ -1010,28 +1077,22 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const prog = num(a.cleaning_progress);
       const area = this._measure('cleaned_area', 'cleaned_area', 'm²');
       const time = this._measure('cleaning_time', 'cleaning_time', 'min');
-      const ssel = this._select('suction_level');
-      const hsel = this._select('mop_pad_humidity') || this._select('water_volume');
-      const suction = ssel ? this._opt(ssel.so, ssel.value, false) : (a.suction_level || '');
-      const hum = this._wet() ? this._wet().name : (hsel ? this._opt(hsel.so, hsel.value, false) : '');
-      const lay = this._layout();
       const showProg = (s.running || s.paused) && prog !== null;
       return `<div class="st">
         <div class="stack-s grow">
-          <div class="rowf" style="flex-wrap:wrap">
-            <h1 class="h" style="font-size:20px">${esc(this._title())}</h1>
-            <span class="rowf small muted"><span class="dot ${s.dot}"></span>${esc(s.text)}</span>
-            <span class="grow"></span>${this._careChip()}
+          <div class="rowf" style="flex-wrap:wrap;gap:6px 16px">
+            <h1 class="h" style="font-size:22px">${esc(this._title())}</h1>
+            <span class="state"><span class="dot ${s.dot}"></span>${esc(s.text)}</span>
           </div>
           ${showProg ? `<div class="rowf"><div class="bar grow"><i style="width:${clamp(prog, 0, 100)}%"></i></div><span class="small" style="font-variant-numeric:tabular-nums">${prog}%</span></div>` : ''}
           <div class="meta">
             ${bat.v !== null ? `<span>${ic(bat.icon)}<b>${bat.v}%</b> battery</span>` : ''}
             ${area ? `<span>${ic('mdi:texture-box')}<b>${esc(area.text)}</b> ${s.running || s.paused ? 'cleaned' : 'last run'}</span>` : ''}
             ${time ? `<span>${ic('mdi:timer-outline')}<b>${esc(time.text)}</b></span>` : ''}
-            ${lay === 'desktop' && suction ? `<span>${ic('mdi:fan')}${esc(suction)}${hum ? ` · ${esc(hum)}` : ''}</span>` : ''}
           </div>
         </div>
         <div class="rowf">
+          ${this._bell()}
           <button class="ibtn" data-a="svc" data-v="locate" aria-label="Locate robot" title="Locate">${ic('mdi:map-marker-radius-outline')}</button>
           <button class="ibtn" data-a="svc" data-v="return_to_base" aria-label="Send to dock" title="Send to dock">${ic('mdi:home-import-outline')}</button>
           <button class="ibtn" data-a="svc" data-v="stop" aria-label="Stop" title="Stop">${ic('mdi:stop')}</button>
@@ -1154,19 +1215,20 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _levels() {
       const a = this._a;
       const lv = [];
-      const tank = (k, label) => {
+      const item = (cls, icon, label, value) => lv.push(`<div class="lv ${cls}">${ic(icon)}<span><span class="muted">${label}</span><b>${esc(value)}</b></span></div>`);
+      const tank = (k, label, icon) => {
         const v = a[k];
         if (v === undefined) return;
         const ok = /^(installed|normal|ok)$/i.test(String(v));
-        lv.push(`<div class="lv ${ok ? 'ok' : 'warn'}"><span class="muted">${label}</span><b>${ok ? 'OK' : esc(human(v))}</b></div>`);
+        item(ok ? '' : 'warn', icon, label, ok ? 'OK' : human(v));
       };
-      if (a.low_water_warning && !/no warning/i.test(a.low_water_warning)) lv.push(`<div class="lv warn"><span class="muted">Clean water</span><b>${esc(human(a.low_water_warning))}</b></div>`);
-      else tank('clean_water_tank_status', 'Clean water');
-      tank('dirty_water_tank_status', 'Dirty water');
-      tank('dust_bag_status', 'Dust bag');
+      if (a.low_water_warning && !/no warning/i.test(a.low_water_warning)) item('warn', 'mdi:water-alert-outline', 'Clean water', human(a.low_water_warning));
+      else tank('clean_water_tank_status', 'Clean water', 'mdi:water-outline');
+      tank('dirty_water_tank_status', 'Dirty water', 'mdi:cup-water');
+      tank('dust_bag_status', 'Dust bag', 'mdi:delete-outline');
       const det = num(a.detergent_left);
-      if (det !== null) lv.push(`<div class="lv ${det <= (this._config.care_warning ?? 20) ? 'warn' : ''}"><span class="muted">Detergent</span><b>${det}%</b></div>`);
-      return lv.length ? `<div class="levels">${lv.join('')}</div>` : '';
+      if (det !== null) item(det <= (this._config.care_warning ?? 20) ? 'warn' : '', 'mdi:bottle-tonic-outline', 'Detergent', `${det}%`);
+      return lv.length ? `<div class="levels n${lv.length}">${lv.join('')}</div>` : '';
     }
 
     _dockActions() {
@@ -1194,7 +1256,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const prog = a.drying ? num(a.drying_progress) : null;
       return `<div class="stack" style="gap:14px">
         <div class="between"><div class="grow"><h2 class="h">Dock</h2><div class="small muted" style="margin-top:2px">${esc(this._dockState())}</div></div>
-          ${this._ui.view === 'dock' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="dock">Dock settings</button>`}</div>
+          ${this._ui.view === 'care' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="care">Dock & care</button>`}</div>
         ${prog !== null ? `<div class="bar"><i style="width:${clamp(prog, 0, 100)}%"></i></div>` : ''}
         ${this._levels()}
         ${this._dockActions()}
@@ -1315,12 +1377,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _phoneTop() {
       const s = this._status();
       const bat = this._battery();
-      const n = this._notes().length;
       const nav = this._haNav('fab');
       return `${nav}<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
           <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
           <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
-        <button class="fab ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts, ${n} new">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>
+        ${this._bell('fab')}
         <button class="fab ${this._ui.pop === 'menu' ? 'on' : ''}" data-a="pop" data-v="menu" aria-label="More">${ic('mdi:dots-vertical')}</button>`;
     }
 
@@ -1369,14 +1430,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _phoneHead() {
       const v = this._views().find((x) => x[0] === this._ui.view);
-      return `<button class="ibtn" data-a="view" data-v="clean" aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow" style="font-size:18px">${esc(v ? v[1] : '')}</h1>
-        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}<button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
+      const cat = this._ui.view === 'settings' ? this._setCat() : null;
+      const back = cat ? 'data-a="setcat" data-v=""' : 'data-a="view" data-v="clean"';
+      return `<button class="ibtn" ${back} aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow ell" style="font-size:18px">${esc(cat ? cat.title : v ? v[1] : '')}</h1>
+        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}${this._bell()}`;
     }
 
     /* ---------- full views ---------- */
     _viewBody() {
       switch (this._ui.view) {
-        case 'dock': return this._dockView();
         case 'care': return this._careView();
         case 'settings': return this._settingsView();
         case 'history': return this._historyView();
@@ -1446,31 +1508,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return out;
     }
 
-    _dockView() {
-      const a = this._a;
+    /** Dock and care on one page: dock status, actions and settings next to parts and totals. */
+    _careView() {
       const lay = this._layout();
       const c = this._config;
-      const ids = this._keysFor(DOCK_KEYS.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling));
-      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'].filter((k) => k !== 'water_tank_draining' || c.show_water_tank_draining), ['button']);
-      return `${this._viewHead('Dock', this._dockState())}
-        <div style="display:grid;grid-template-columns:${lay === 'desktop' ? 'minmax(320px,420px) minmax(0,1fr)' : '1fr'};gap:12px;align-items:start">
-          <div class="stack"><section class="panel pad">${this._dockBlock(lay === 'phone')}</section>
-          ${a.drying ? `<section class="panel pad"><div class="between"><span class="h">Drying</span><span class="small muted">${num(a.drying_progress) ?? 0}%</span></div><div class="bar" style="margin-top:10px"><i style="width:${clamp(num(a.drying_progress) || 0, 0, 100)}%"></i></div></section>` : ''}
-          ${this._group('Dock tools', 'mdi:toolbox-outline', extraBtns)}</div>
-          <div class="cols">${this._group('Dock settings', 'mdi:home-lightning-bolt-outline', ids) || '<section class="panel pad muted">No dock settings found for this robot.</section>'}</div>
-        </div>`;
-    }
-
-    _careView() {
       const parts = this._consumables();
       const notes = this._notes();
-      const warn = Number(this._config.care_warning ?? 20), crit = Number(this._config.care_critical ?? 10);
+      const warn = Number(c.care_warning ?? 20), crit = Number(c.care_critical ?? 10);
       const faults = notes.filter((n) => n.id.startsWith('fault_') || n.id === 'error');
-      const stat = (key, attr, label, fmt) => {
+      const stat = (key, attr, label, icon, fmt) => {
         const s = this._live('sensor', key);
         const raw = s ? s.state : this._a[attr];
         if (raw === undefined || raw === null) return '';
-        return `<div class="stat"><div class="lbl">${label}</div><b>${esc(fmt ? fmt(raw, s) : raw)}</b></div>`;
+        return `<div class="lv">${ic(icon)}<span><span class="muted">${label}</span><b>${esc(fmt ? fmt(raw, s) : raw)}</b></span></div>`;
       };
       const mins = (v, s) => {
         const u = s?.attributes?.unit_of_measurement || 'min';
@@ -1479,58 +1529,114 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return `${n.toLocaleString()} ${u}`;
       };
       const stats = [
-        stat('total_cleaning_time', 'total_cleaning_time', 'Total cleaning time', mins),
-        stat('cleaning_count', 'cleaning_count', 'Cleanings', (v) => Number(v).toLocaleString()),
-        stat('total_cleaned_area', 'total_cleaned_area', 'Total area', (v, s) => `${Math.round(Number(v)).toLocaleString()} ${s?.attributes?.unit_of_measurement || 'm²'}`),
-        stat('first_cleaning_date', 'first_cleaning_date', 'First cleaning', (v) => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleDateString(); }),
-      ].join('');
-      return `${this._viewHead('Care', 'Parts, warnings and lifetime totals')}
-        <div class="stack">
-          ${faults.map((n) => `<div class="alert crit" style="cursor:default">${ic(n.icon, 'style="color:var(--dv-errt)"')}<span class="grow"><b style="font-weight:500;display:block">${esc(n.title)}</b><span class="xs muted">${esc(n.desc)}</span></span>${n.action ? `<button class="btn sm" data-a="${n.action.a}" data-e="${n.action.e || ''}">${esc(n.action.label)}</button>` : ''}</div>`).join('')}
-          <div class="parts">${parts.map((p) => {
-            const color = p.pct <= crit ? 'var(--dv-err)' : p.pct <= warn ? 'var(--dv-warn)' : 'var(--dv-p)';
-            const tcol = p.pct <= crit ? 'var(--dv-errt)' : p.pct <= warn ? 'var(--dv-warnt)' : 'var(--dv-text2)';
-            return `<section class="panel pad stack" style="gap:14px"><div class="rowf" style="gap:14px">
-              <div class="ring" style="background:conic-gradient(${color} ${p.pct}%, var(--dv-bg2) 0)" role="img" aria-label="${esc(p.name)} ${p.pct}%"><span>${p.pct}%</span></div>
-              <div class="grow"><h2 class="h" style="font-size:15px">${esc(p.name)}</h2><div class="small" style="margin-top:4px;color:${tcol}">${p.timeLeft !== null ? `${p.timeLeft} ${esc(p.unit)} left` : ''}</div></div></div>
-              <div class="between"><span class="xs muted">${ic(p.icon, 'style="--mdc-icon-size:16px;vertical-align:-3px"')}</span><button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="Reset ${esc(p.name)}">Reset</button></div></section>`;
-          }).join('') || '<section class="panel pad muted">No consumable data reported.</section>'}</div>
-          ${stats ? `<section class="panel pad stack"><h2 class="h">Lifetime</h2><div class="stats">${stats}</div></section>` : ''}
-        </div>`;
+        stat('total_cleaning_time', 'total_cleaning_time', 'Cleaning time', 'mdi:timer-outline', mins),
+        stat('cleaning_count', 'cleaning_count', 'Cleanings', 'mdi:counter', (v) => Number(v).toLocaleString()),
+        stat('total_cleaned_area', 'total_cleaned_area', 'Total area', 'mdi:texture-box', (v, s) => `${Math.round(Number(v)).toLocaleString()} ${s?.attributes?.unit_of_measurement || 'm²'}`),
+        stat('first_cleaning_date', 'first_cleaning_date', 'First cleaning', 'mdi:calendar-start', (v) => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleDateString(); }),
+      ].filter(Boolean);
+      const settingIds = this._keysFor(DOCK_KEYS.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling));
+      const toolIds = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'].filter((k) => k !== 'water_tank_draining' || c.show_water_tank_draining), ['button']);
+
+      const faultHtml = faults.map((n) => `<div class="alert crit" style="cursor:default">${ic(n.icon, 'style="color:var(--dv-errt)"')}<span class="grow"><b style="font-weight:500;display:block">${esc(n.title)}</b><span class="xs muted">${esc(n.desc)}</span></span>${n.action ? `<button class="btn sm" data-a="${n.action.a}" data-e="${n.action.e || ''}">${esc(n.action.label)}</button>` : ''}</div>`).join('');
+      const dock = `<section class="panel pad">${this._dockBlock(lay === 'phone')}</section>`;
+      const partsHtml = `<section class="panel pad stack" style="gap:14px"><h2 class="h">Parts</h2><div class="parts">${parts.map((p) => {
+        const color = p.pct <= crit ? 'var(--dv-err)' : p.pct <= warn ? 'var(--dv-warn)' : 'var(--dv-p)';
+        const tcol = p.pct <= crit ? 'var(--dv-errt)' : p.pct <= warn ? 'var(--dv-warnt)' : 'var(--dv-text2)';
+        return `<div class="part"><div class="ring" style="background:conic-gradient(${color} ${p.pct}%, var(--dv-div) 0)" role="img" aria-label="${esc(p.name)} ${p.pct}%"><span>${p.pct}%</span></div>
+          <div class="grow"><div class="rowf" style="gap:6px">${ic(p.icon, 'style="--mdc-icon-size:16px;color:var(--dv-text2)"')}<b class="ell" style="font-weight:500;font-size:14px">${esc(p.name)}</b></div>
+          <div class="xs" style="margin-top:2px;color:${tcol}">${p.timeLeft !== null ? `${p.timeLeft} ${esc(p.unit)} left` : '&nbsp;'}</div></div>
+          <button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="Reset ${esc(p.name)}">Reset</button></div>`;
+      }).join('') || '<span class="muted small">No consumable data reported.</span>'}</div></section>`;
+      const lifetime = stats.length ? `<section class="panel pad stack" style="gap:14px"><h2 class="h">Lifetime</h2><div class="levels n${stats.length}">${stats.join('')}</div></section>` : '';
+      const settings = this._group('Dock settings', 'mdi:tune-variant', settingIds);
+      const tools = this._group('Dock tools', 'mdi:toolbox-outline', toolIds);
+      const head = this._viewHead('Dock & care', 'Dock, parts and lifetime totals');
+      if (lay === 'desktop') {
+        return `${head}<div class="stack">${faultHtml}<div style="display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:12px;align-items:start">
+          <div class="stack">${dock}${settings}${tools}</div><div class="stack">${partsHtml}${lifetime}</div></div></div>`;
+      }
+      return `${head}<div class="stack">${faultHtml}${dock}${partsHtml}${settings}${tools}${lifetime}</div>`;
+    }
+
+    /** Settings categories with this robot's controls; empty ones are dropped. */
+    _setCats() {
+      const c = this._config;
+      const all = Object.entries(this._map).filter(([k]) => !k.includes('.room_'));
+      const used = new Set();
+      const ids = (keys, domains) => this._keysFor(keys.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling), domains);
+      const cats = SETTINGS.map(([id, title, icon, desc, secs]) => {
+        let sections = secs.map(([t, keys]) => ({ title: t, ids: ids(keys) }));
+        if (id === 'maint') {
+          const btns = all.filter(([k]) => k.startsWith('button.') && !HIDDEN_BTN.test(k) && (k !== 'button.water_tank_draining' || c.show_water_tank_draining)).map(([, e]) => e);
+          sections = MAINT.map(([t, keys]) => ({ title: t, ids: ids(keys, ['button']).filter((e) => btns.includes(e)) }));
+          const taken = new Set(sections.flatMap((x) => x.ids));
+          sections.push({ title: 'More', ids: btns.filter((e) => !taken.has(e)) });
+        }
+        sections.forEach((x) => x.ids.forEach((e) => used.add(e)));
+        return { id, title, icon, desc, sections };
+      });
+      // Leftover settings the lists above don't know about go to System › More.
+      const skip = new Set(CLEAN_KEYS);
+      const other = all.filter(([k, e]) => {
+        const [d, key] = k.split('.');
+        return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(e) && !skip.has(key)
+          && (key !== 'auto_water_refilling' || c.show_auto_water_refilling);
+      }).map(([, e]) => e);
+      cats.find((x) => x.id === 'system').sections.push({ title: 'More', ids: other });
+      const roomKeys = Object.keys(this._map).filter((k) => /^(switch|select|number|time)\.room_\d+_/.test(k));
+      const out = cats.map((cat) => {
+        cat.sections = cat.sections.filter((x) => x.ids.length);
+        cat.count = cat.id === 'rooms' ? roomKeys.length : cat.sections.reduce((n, x) => n + x.ids.length, 0);
+        return cat;
+      }).filter((cat) => cat.count && (cat.id !== 'rooms' || this._rooms().length));
+      return out;
+    }
+
+    /** The open category. Phone shows the list until one is picked; wider layouts open the first. */
+    _setCat() {
+      const cats = this._setCats();
+      const cur = cats.find((x) => x.id === this._ui.setcat);
+      if (cur) return cur;
+      return this._layout() === 'phone' ? null : cats[0] || null;
     }
 
     _settingsView() {
-      const used = new Set();
-      const groups = [];
-      const all = Object.entries(this._map).filter(([k]) => !k.includes('.room_'));
-      for (const [gid, title, icon, keys] of GROUPS) {
-        const ids = this._keysFor(keys);
-        ids.forEach((i) => used.add(i));
-        groups.push(this._group(title, icon, ids));
-      }
-      const skip = new Set([...CLEAN_KEYS, ...DOCK_KEYS]);
-      const other = all.filter(([k, id]) => {
-        const [d, key] = k.split('.');
-        return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(id) && !skip.has(key);
-      }).map(([, id]) => id);
-      groups.push(this._group('Other', 'mdi:dots-horizontal', other));
-      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k) && (k !== 'button.water_tank_draining' || this._config.show_water_tank_draining)).map(([, id]) => id);
-      groups.push(this._group('Actions', 'mdi:play-box-outline', actions));
-      groups.push(this._roomSettings());
-      return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}<div class="cols">${groups.filter(Boolean).join('')}</div>`;
+      const cats = this._setCats();
+      const lay = this._layout();
+      const cur = this._setCat();
+      if (!cats.length) return `${this._viewHead('Settings')}<section class="panel pad muted">No settings found for this robot.</section>`;
+      const list = `<nav class="panel slist" aria-label="Settings categories">${cats.map((cat) => {
+        const on = cur && cat.id === cur.id && lay !== 'phone';
+        return `<button class="sitem ${on ? 'on' : ''}" data-a="setcat" data-v="${cat.id}" ${on ? 'aria-current="true"' : ''}><span class="sic">${ic(cat.icon)}</span>
+          <span class="grow" style="min-width:0"><b>${esc(cat.title)}</b><span class="xs muted ell">${esc(cat.desc)}</span></span>${ic('mdi:chevron-right')}</button>`;
+      }).join('')}</nav>`;
+      if (lay === 'phone') return cur ? `<div class="sdet">${this._setDetail(cur)}</div>` : list;
+      return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}
+        <div class="sset">${list}<div class="sdet" data-keep="set-${cur.id}">${this._setDetail(cur)}</div></div>`;
+    }
+
+    _setDetail(cat) {
+      const head = this._layout() === 'phone' ? '' : `<div class="sdh"><span class="sic">${ic(cat.icon)}</span><div><h2 class="h" style="font-size:20px">${esc(cat.title)}</h2>
+        <div class="small muted" style="margin-top:2px">${esc(cat.desc)}</div></div></div>`;
+      if (cat.id === 'rooms') return head + this._roomSettings();
+      return head + cat.sections.map((x) => `<section class="ssec">${x.title ? `<h3 class="lbl" style="margin:0">${esc(x.title)}</h3>` : ''}
+        <div class="panel">${x.ids.map((e) => this._control(e)).join('')}</div></section>`).join('');
     }
 
     _roomSettings() {
       const rooms = this._rooms();
       if (!rooms.length) return '';
-      const rid = this._ui.room ?? rooms[0].id;
+      const rid = rooms.some((r) => r.id === this._ui.room) ? this._ui.room : rooms[0].id;
       const pre = `room_${rid}_`;
-      const ids = Object.entries(this._map).filter(([k]) => k.split('.')[1]?.startsWith(pre)).map(([, id]) => id);
-      if (!ids.length && !Object.keys(this._map).some((k) => k.includes('.room_'))) return '';
-      const rows = ids.map((id) => this._control(id, human(id.split('.')[1].split(pre)[1] || ''))).join('');
-      return `<section class="panel grp"><div class="grp-h">${ic('mdi:floor-plan')}<h2 class="h grow">Rooms</h2>
-        <select class="sel" data-a="setroom" aria-label="Room">${rooms.map((r) => `<option value="${r.id}" ${r.id === rid ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
-        ${rows || '<div class="row small muted">No per-room settings for this room.</div>'}</section>`;
+      const order = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleaning_times', 'order', 'floor_material', 'floor_material_direction', 'name'];
+      const rank = (k) => { const i = order.indexOf(k); return i < 0 ? order.length : i; };
+      const ids = Object.entries(this._map).filter(([k]) => /^(switch|select|number|time)\./.test(k) && k.split('.')[1]?.startsWith(pre))
+        .map(([k, id]) => [k.split('.')[1].slice(pre.length), id]).sort((x, y) => rank(x[0]) - rank(y[0]));
+      const rows = ids.map(([k, id]) => this._control(id, human(k))).join('');
+      const chips = `<div class="chips wrap" style="justify-content:flex-start">${rooms.map((r) => `<button class="chip ${r.id === rid ? 'on' : ''}" aria-pressed="${r.id === rid}" data-a="setroom" data-v="${r.id}">${esc(r.name)}</button>`).join('')}</div>`;
+      return `<section class="ssec"><h3 class="lbl" style="margin:0">Room</h3>${chips}</section>
+        <section class="ssec"><h3 class="lbl" style="margin:0">${esc((rooms.find((r) => r.id === rid) || {}).name || '')}</h3>
+        <div class="panel">${rows || '<div class="row small muted">No per-room settings for this room.</div>'}</div></section>`;
     }
 
     _historyItems() {
@@ -1588,9 +1694,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const v = el.dataset.v;
       const e = el.dataset.e;
       const u = this._ui;
-      if (['optsel', 'num', 'time', 'setroom'].includes(a)) return; // handled on change
+      if (['optsel', 'num', 'time'].includes(a)) return; // handled on change
       switch (a) {
-        case 'view': u.view = v; u.pop = null; break;
+        case 'view': u.view = v === 'dock' ? 'care' : v; u.pop = null; if (u.view === 'settings') u.setcat = null; break;
+        case 'setcat': {
+          u.setcat = v || null;
+          const vw = this.shadowRoot.querySelector('[data-r="view"]');
+          if (vw) vw.scrollTop = 0; // open a category, or go back to the list, at the top
+          break;
+        }
+        case 'setroom': u.room = Number(v); break;
         case 'target': u.target = v; break;
         case 'room': {
           const id = Number(v);
@@ -1632,7 +1745,6 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (a === 'optsel') this._call('select', 'select_option', { entity_id: e, option: el.value });
       else if (a === 'num') this._call('number', 'set_value', { entity_id: e, value: Number(el.value) });
       else if (a === 'time') this._call('time', 'set_value', { entity_id: e, time: `${el.value}:00` });
-      else if (a === 'setroom') { this._ui.room = Number(el.value); this._schedule(); }
     }
 
     _onDown(ev) {
