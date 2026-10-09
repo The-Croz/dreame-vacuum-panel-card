@@ -1,0 +1,129 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>
+  html,body{margin:0}
+  body{font-family:Inter,sans-serif;background:var(--primary-background-color)}
+  body.light{--primary-color:#03a9f4;--primary-background-color:#fafafa;--secondary-background-color:#e5e5e5;--card-background-color:#fff;--primary-text-color:#212121;--secondary-text-color:#727272;--divider-color:rgba(0,0,0,.12)}
+  body.dark{--primary-color:#03a9f4;--primary-background-color:#111111;--secondary-background-color:#282828;--card-background-color:#1c1c1c;--primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b;--divider-color:rgba(225,225,225,.12);color-scheme:dark}
+  body{--ha-font-family-body:Inter,sans-serif}
+</style>
+<script>
+  // Stand-ins for Home Assistant's own elements.
+  let ICONS = {};
+  customElements.define('ha-card', class extends HTMLElement { connectedCallback() { this.style.display = 'block'; } });
+  customElements.define('ha-icon', class extends HTMLElement {
+    static get observedAttributes() { return ['icon']; }
+    connectedCallback() { this.draw(); }
+    attributeChangedCallback() { this.draw(); }
+    draw() {
+      const d = ICONS[this.getAttribute('icon')] || '';
+      this.innerHTML = `<svg viewBox="0 0 24 24" style="width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px);display:block;fill:currentColor"><path d="${d}"/></svg>`;
+    }
+  });
+</script>
+</head><body>
+<script type="module">
+const q = new URLSearchParams(location.search);
+const scene = q.get('scene') || 'clean';
+const dark = q.get('theme') === 'dark';
+document.body.className = dark ? 'dark' : 'light';
+ICONS = await (await fetch('icons.json')).json();
+const geo = await (await fetch('map.json')).json();
+await import('../../dist/dreame-vacuum-panel-card.js');
+
+const P = 'beep_0';
+const st = {}, ent = {};
+const NAMES = { dnd: 'DND', dnd_start: 'DND start', dnd_end: 'DND end', ai_obstacle_detection: 'AI obstacle detection', ai_obstacle_picture: 'AI obstacle picture', ai_obstacle_image_upload: 'AI obstacle image upload', ai_pet_detection: 'AI pet detection', ai_furniture_detection: 'AI furniture detection', off_peak_charging: 'Off-peak charging', off_peak_charging_start: 'Off-peak charging start', off_peak_charging_end: 'Off-peak charging end', self_clean: 'Self-clean', self_clean_area: 'Self-clean area', self_clean_by_zone: 'Self-clean by zone' };
+const nice = (k) => NAMES[k] || (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, ' ');
+const add = (id, state, attributes = {}) => {
+  const key = id.split('.')[1].slice(P.length + 1);
+  st[id] = { entity_id: id, state: String(state), attributes: { friendly_name: `Beep-0 ${nice(key)}`, ...attributes }, last_updated: '1' };
+  ent[id] = { device_id: 'dev' };
+};
+
+const running = ['clean', 'zone', 'tablet'].includes(scene);
+add(`vacuum.${P}`, running ? 'cleaning' : 'docked', {
+  status: running ? 'sweeping_and_mopping' : 'sleeping', running, battery: running ? 82 : 100, cleaning_progress: 42,
+  main_brush_left: 64, side_brush_left: 8, filter_left: 71, mop_pad_left: 38, detergent_left: 16, sensor_dirty_left: 87, silver_ion_left: 100,
+  low_water_warning: 'No warning', auto_empty_status: 'Idle', dust_bag_status: 'Installed', detergent_status: 'Installed',
+  clean_water_tank_status: 'Installed', dirty_water_tank_status: 'Installed', vacuum_state: running ? 'sweeping_and_mopping' : 'charging_completed',
+  selected_map: 'Home',
+});
+const parts = { main_brush: [64, 192], side_brush: [8, 16], filter: [71, 106], mop_pad: [38, 30], detergent: [16, 4], sensor_dirty: [87, 26] };
+for (const [k, [p, h]] of Object.entries(parts)) {
+  add(`sensor.${P}_${k}_left`, p, { unit_of_measurement: '%' });
+  add(`sensor.${P}_${k}_time_left`, h, { unit_of_measurement: k === 'detergent' ? 'd' : 'h' });
+}
+add(`sensor.${P}_status`, running ? 'Sweeping and mopping' : 'Sleeping');
+if (running) add(`sensor.${P}_current_room`, 'Kitchen');
+add(`sensor.${P}_cleaned_area`, running ? 161 : 237, { unit_of_measurement: 'ft²' });
+add(`sensor.${P}_cleaning_time`, running ? 19 : 30, { unit_of_measurement: 'min' });
+add(`sensor.${P}_total_cleaning_time`, 7260, { unit_of_measurement: 'min' });
+add(`sensor.${P}_cleaning_count`, 143);
+add(`sensor.${P}_total_cleaned_area`, 52310, { unit_of_measurement: 'ft²' });
+add(`sensor.${P}_first_cleaning_date`, '2025-03-14');
+
+const sel = (k, v, options) => add(`select.${P}_${k}`, v, { options });
+sel('cleangenius', 'off', ['off', 'routine_cleaning', 'deep_cleaning']);
+sel('cleaning_mode', 'sweeping_and_mopping', ['sweeping', 'mopping', 'sweeping_and_mopping', 'mopping_after_sweeping']);
+sel('suction_level', 'strong', ['quiet', 'standard', 'strong', 'turbo']);
+sel('mop_pad_humidity', 'moist', ['slightly_dry', 'moist', 'wet']);
+sel('cleaning_route', 'standard', ['quick', 'standard', 'intensive', 'deep']);
+sel('carpet_cleaning', 'adaptation', ['adaptation', 'remove_mop', 'vacuum_only']);
+sel('drying_time', '3h', ['2h', '3h', '4h']);
+sel('mop_wash_level', 'daily', ['water_saving', 'daily', 'deep']);
+sel('voice_assistant_language', 'english', ['english', 'german', 'french', 'spanish', 'italian']);
+sel('mop_pad_swing', 'auto', ['auto', 'off', 'daily', 'weekly']);
+sel('auto_recleaning', 'off', ['off', 'in_deep_mode', 'in_all_modes']);
+sel('auto_rewashing', 'in_deep_mode', ['off', 'in_deep_mode', 'in_all_modes']);
+sel('auto_empty_mode', 'standard', ['off', 'standard', 'high_frequency', 'low_frequency']);
+sel('map_rotation', '0', ['0', '90', '180', '270']);
+sel('selected_map', 'Home', ['Home']);
+add(`number.${P}_wetness_level`, 14, { min: 1, max: 32, step: 1 });
+add(`number.${P}_volume`, 60, { min: 0, max: 100, step: 1, unit_of_measurement: '%' });
+add(`number.${P}_self_clean_area`, 20, { min: 10, max: 35, step: 1, unit_of_measurement: 'm²' });
+add(`number.${P}_camera_light_brightness`, 40, { min: 0, max: 100, step: 1, unit_of_measurement: '%' });
+add(`switch.${P}_customized_cleaning`, 'off');
+'resume_cleaning carpet_boost obstacle_avoidance child_lock dnd multi_floor_map self_clean auto_drying auto_add_detergent auto_mount_mop voice_assistant cleaning_sequence self_clean_by_zone ai_obstacle_detection ai_obstacle_image_upload ai_obstacle_picture ai_pet_detection ai_furniture_detection fuzzy_obstacle_detection pet_picture pet_focused_detection fill_light collision_avoidance floor_direction_cleaning intensive_carpet_cleaning gap_cleaning_extension mopping_under_furnitures off_peak_charging human_follow max_suction_power streaming_voice_prompt clean_carpets_first camera_light_brightness_auto'
+  .split(' ').forEach((k, i) => add(`switch.${P}_${k}`, ['child_lock', 'human_follow', 'off_peak_charging', 'max_suction_power', 'fill_light', 'pet_picture'].includes(k) ? 'off' : 'on'));
+add(`time.${P}_dnd_start`, '22:00:00'); add(`time.${P}_dnd_end`, '08:00:00');
+add(`time.${P}_off_peak_charging_start`, '22:00:00'); add(`time.${P}_off_peak_charging_end`, '06:00:00');
+for (const k of ['reset_main_brush', 'reset_side_brush', 'reset_filter', 'reset_sensor', 'reset_mop_pad', 'reset_detergent', 'start_auto_empty', 'clear_warning', 'start_fast_mapping', 'self_clean', 'manual_drying', 'base_station_self_repair', 'base_station_cleaning', 'start_recleaning', 'reload_shortcuts', 'backup_saved_map'])
+  add(`button.${P}_${k}`, 'unknown');
+for (const [rid, r] of Object.entries(geo.rooms)) {
+  const opt = (k, v, o) => add(`select.${P}_room_${rid}_${k}`, v, { options: o, friendly_name: `Beep-0 ${r.name} ${nice(k).toLowerCase()}` });
+  opt('cleaning_mode', 'sweeping_and_mopping', ['sweeping', 'mopping', 'sweeping_and_mopping']);
+  opt('suction_level', 'standard', ['quiet', 'standard', 'strong', 'turbo']);
+  add(`number.${P}_room_${rid}_wetness_level`, 14, { min: 1, max: 32, step: 1 });
+  opt('cleaning_route', 'standard', ['quick', 'standard', 'intensive', 'deep']);
+  opt('cleaning_times', '1', ['1', '2', '3']);
+  opt('order', rid, Object.keys(geo.rooms));
+  opt('floor_material', 'wood', ['none', 'tile', 'wood']);
+}
+add(`camera.${P}_map`, 'idle', { entity_picture: dark ? 'map-dark.png' : 'map.png', calibration_points: geo.calibration_points, rooms: geo.rooms });
+
+const hass = {
+  states: st, entities: ent, devices: { dev: { name: 'Beep-0' } },
+  config: { unit_system: { length: 'mi', area: 'ft²' } }, callService: async () => {},
+};
+const card = document.createElement('dreame-vacuum-panel-card');
+card.setConfig({ entity: `vacuum.${P}`, fullscreen: false, height: '100vh' });
+document.body.append(card);
+card.hass = hass;
+
+const ui = card._ui;
+const rooms = Object.values(geo.rooms);
+const id = (n) => rooms.find((r) => r.name === n).room_id;
+({
+  clean: () => { ui.target = 'rooms'; ui.sel = [id('Kitchen'), id('Dining Room'), id('Living Room')]; },
+  tablet: () => { ui.target = 'rooms'; ui.sel = [id('Kitchen'), id('Dining Room')]; },
+  idle: () => {},
+  zone: () => { const r = geo.rooms[id('Living Room')]; ui.target = 'zone'; ui.passes = 2; ui.zone = [r.x0 + 600, r.y0 + 2500, r.x0 + 6200, r.y1 - 1200]; },
+  care: () => { ui.view = 'care'; },
+  settings: () => { ui.view = 'settings'; ui.setcat = q.get('cat'); },
+  dock: () => { ui.sheetTab = 'dock'; },
+  phone: () => { ui.target = 'rooms'; ui.sel = [id('Kitchen'), id('Hallway')]; },
+}[scene] || (() => {}))();
+card._schedule();
+</script>
+</body></html>
