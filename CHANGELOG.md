@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3
+
+- **Corners stay rounded under any theme.** 0.2.2 read Home Assistant's radius variables, and a
+  theme that sets them to 0 made the whole card square. The card now uses its own 12 px radius
+  (including the outer card) and ignores the theme's value.
+- New `border_radius` option (px) to change it; panels, tiles, inputs and the phone sheet scale
+  from that value.
+
 ## 0.2.2
 
 - **Native rounded corners.** Radii now come from Home Assistant's own tokens

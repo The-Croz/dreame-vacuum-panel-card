@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.2.2';
+  const VERSION = '0.2.3';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -103,14 +103,14 @@ ha-card.dv{
   --dv-errt:color-mix(in srgb,var(--dv-err) 75%,var(--dv-text));
   --dv-warnbg:color-mix(in srgb,var(--dv-warn) 15%,var(--dv-bg));
   --dv-errbg:color-mix(in srgb,var(--dv-err) 13%,var(--dv-bg));
-  --dv-r:var(--ha-card-border-radius,var(--ha-border-radius-lg,12px));
-  --dv-r-md:var(--ha-border-radius-md,8px);
-  --dv-r-xl:var(--ha-border-radius-xl,16px);
-  --dv-r-sheet:var(--ha-border-radius-3xl,24px);
-  --dv-pill:var(--ha-border-radius-pill,9999px);
+  --dv-r:12px;
+  --dv-r-md:calc(var(--dv-r) * .67);
+  --dv-r-xl:calc(var(--dv-r) * 1.34);
+  --dv-r-sheet:calc(var(--dv-r) * 2);
+  --dv-pill:9999px;
   --dv-inset:8px;
   --dv-mapbg:var(--dv-bg2);
-  height:var(--dv-h);min-height:480px;position:relative;overflow:hidden;isolation:isolate;
+  border-radius:var(--dv-r);height:var(--dv-h);min-height:480px;position:relative;overflow:hidden;isolation:isolate;
   background:var(--dv-page);color:var(--dv-text);
   font-family:var(--ha-font-family-body,Roboto,'Helvetica Neue',system-ui,sans-serif);
   -webkit-font-smoothing:antialiased;
@@ -354,7 +354,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     static getConfigForm() {
       const labels = {
         entity: 'Vacuum', map_entity: 'Map camera (optional)', title: 'Title (optional)', layout: 'Layout',
-        height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', default_target: 'Default cleaning target',
+        height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', border_radius: 'Corner radius (px, default 12)', default_target: 'Default cleaning target',
         show_back: 'Show back button', show_menu: 'Show HA menu button', fullscreen: 'Fill the screen in panel views',
         show_water_tank_draining: 'Show Water Tank Draining (needs drain & refill kit)', show_auto_water_refilling: 'Show Auto Water Refilling (needs drain & refill kit)',
         care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)',
@@ -371,6 +371,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
               { name: 'default_target', selector: { select: { mode: 'dropdown', options: [{ value: 'all', label: 'All rooms' }, { value: 'rooms', label: 'Rooms' }] } } },
               { name: 'height', selector: { text: {} } },
               { name: 'accent_color', selector: { text: {} } },
+              { name: 'border_radius', selector: { number: { min: 0, max: 32, mode: 'box' } } },
               { name: 'show_back', selector: { boolean: {} } },
               { name: 'show_menu', selector: { boolean: {} } },
               { name: 'fullscreen', selector: { boolean: {} } },
@@ -743,7 +744,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         this._shellKey = key;
         this._regions = {};
         const h = this._config.height || 'calc(100dvh - var(--header-height, 56px) - 16px)';
-        const accent = this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '';
+        const accent = (this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '')
+          + (this._config.border_radius !== undefined && this._config.border_radius !== '' ? `--dv-r:${esc(/^\d+(\.\d+)?$/.test(String(this._config.border_radius)) ? `${this._config.border_radius}px` : this._config.border_radius)};` : '');
         root.innerHTML = `<style>${CSS}</style><ha-card class="dv L-${lay}${this._fsGeo && this._fsWanted() ? ' fs' : ''}" style="--dv-h:${esc(h)};${accent}${this._fsGeo && this._fsWanted() ? `--dv-top:${this._fsGeo.top}px;--dv-left:${this._fsGeo.left}px;--dv-w:${this._fsGeo.width}px;` : ''}">${this._shell(lay, view)}</ha-card>`;
         const img = root.querySelector('[data-img]');
         if (img) {
