@@ -110,6 +110,7 @@ More examples are in [`examples/`](examples).
 | `show_back` | `false` | Shows a back button (browser back). Useful in kiosk mode. |
 | `show_menu` | `false` | Shows a button that opens Home Assistant's sidebar. Useful in kiosk mode. |
 | `accent_color` | theme primary | Any CSS color, if you want the card to stand out from your theme. |
+| `border_radius` | `12` | Corner radius in px. The card no longer reads your theme's radius, so corners stay rounded even when a theme sets it to 0. Panels, tiles, inputs and the phone sheet scale from this value. |
 | `default_target` | `all` | What the cleaning target starts as: `all` or `rooms`. |
 | `care_warning` | `20` | At or below this %, a part shows an amber care alert. |
 | `care_critical` | `10` | At or below this %, the alert turns red. |
