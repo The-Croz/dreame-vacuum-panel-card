@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.2.4';
+  const VERSION = '0.3.0';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -65,16 +65,56 @@
   const RESET_NAME = { sensor_dirty: 'sensor' };
 
   // Keys used by the cleaning controls (kept out of the generic settings lists)
-  const CLEAN_KEYS = ['cleaning_mode', 'suction_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleangenius', 'customized_cleaning', 'selected_map'];
+  const CLEAN_KEYS = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleangenius', 'customized_cleaning', 'selected_map'];
   const DOCK_KEYS = ['self_clean', 'self_clean_area', 'self_clean_by_zone', 'self_clean_frequency', 'mop_wash_level', 'auto_rewashing', 'auto_drying', 'drying_time', 'auto_empty_mode', 'auto_dust_collecting', 'auto_empty_frequency', 'auto_water_refilling', 'auto_add_detergent', 'water_electrolysis', 'mop_clean_frequency', 'washing_mode', 'water_temperature', 'smart_mop_washing', 'smart_drying', 'hot_washing'];
-  const GROUPS = [
-    ['cleaning', 'Cleaning', 'mdi:broom', ['resume_cleaning', 'cleaning_sequence', 'collision_avoidance', 'floor_direction_cleaning', 'gap_cleaning_extension', 'max_suction_power', 'auto_recleaning', 'intelligent_recognition', 'side_reach', 'cleaning_times']],
-    ['mopping', 'Mopping', 'mdi:water-outline', ['tight_mopping', 'auto_mount_mop', 'mopping_under_furnitures', 'mop_pad_swing', 'wetness_level', 'mop_extend', 'mop_extend_frequency', 'stain_avoidance', 'mopping_type', 'mop_pressure', 'mop_temperature', 'uv_sterilization']],
-    ['carpet', 'Carpet', 'mdi:rug', ['carpet_boost', 'carpet_recognition', 'carpet_avoidance', 'carpet_cleaning', 'carpet_sensitivity', 'intensive_carpet_cleaning', 'clean_carpets_first']],
-    ['ai', 'Obstacle avoidance', 'mdi:eye-outline', ['obstacle_avoidance', 'ai_obstacle_detection', 'ai_obstacle_picture', 'ai_obstacle_image_upload', 'ai_pet_detection', 'ai_human_detection', 'ai_furniture_detection', 'ai_fluid_detection', 'fuzzy_obstacle_detection', 'pet_picture', 'pet_focused_detection', 'pet_focused_cleaning', 'fill_light', 'human_follow', 'camera_light_brightness', 'camera_light_brightness_auto']],
-    ['quiet', 'Schedule & sound', 'mdi:volume-high', ['dnd', 'dnd_start', 'dnd_end', 'volume', 'voice_assistant', 'voice_assistant_language', 'streaming_voice_prompt', 'off_peak_charging', 'off_peak_charging_start', 'off_peak_charging_end']],
-    ['general', 'General', 'mdi:cog-outline', ['child_lock', 'multi_floor_map', 'map_saving', 'map_rotation']],
+  // Settings menu: [id, title, icon, description, sections]. Categories are split into titled sections. Keys a robot lacks are skipped,
+  // and a category with nothing left is hidden. Anything unlisted lands in System › More.
+  const SETTINGS = [
+    ['cleaning', 'Cleaning', 'mdi:broom', 'Recleaning, sequence, edges and gaps', [
+      ['Behavior', ['resume_cleaning', 'cleaning_sequence', 'auto_recleaning', 'cleaning_times', 'intelligent_recognition', 'max_suction_power']],
+      ['Edges & gaps', ['collision_avoidance', 'floor_direction_cleaning', 'gap_cleaning_extension', 'side_reach']],
+    ]],
+    ['mopping', 'Mopping', 'mdi:water-outline', 'Mop pads, lifting and where to mop', [
+      ['Mop pads', ['mop_pad_swing', 'mop_extend', 'mop_extend_frequency', 'auto_mount_mop', 'mopping_type', 'mop_pressure', 'mop_temperature', 'tight_mopping', 'uv_sterilization']],
+      ['Where to mop', ['mopping_under_furnitures', 'stain_avoidance']],
+    ]],
+    ['carpet', 'Carpet', 'mdi:rug', 'Boost, recognition and carpet handling', [
+      [null, ['carpet_boost', 'carpet_recognition', 'carpet_sensitivity', 'carpet_avoidance', 'carpet_cleaning', 'intensive_carpet_cleaning', 'clean_carpets_first']],
+    ]],
+    ['dock', 'Dock', 'mdi:home-lightning-bolt-outline', 'Mop washing, drying and emptying', [
+      ['Mop washing', ['self_clean', 'self_clean_area', 'self_clean_by_zone', 'self_clean_frequency', 'mop_clean_frequency', 'mop_wash_level', 'auto_rewashing', 'washing_mode', 'water_temperature', 'smart_mop_washing', 'hot_washing']],
+      ['Drying', ['auto_drying', 'drying_time', 'smart_drying']],
+      ['Emptying & water', ['auto_empty_mode', 'auto_dust_collecting', 'auto_empty_frequency', 'auto_water_refilling', 'auto_add_detergent', 'water_electrolysis']],
+    ]],
+    ['ai', 'Obstacle avoidance', 'mdi:eye-outline', 'Detection, pets and camera', [
+      ['Detection', ['obstacle_avoidance', 'ai_obstacle_detection', 'fuzzy_obstacle_detection', 'ai_furniture_detection', 'ai_fluid_detection', 'ai_human_detection', 'human_follow']],
+      ['Pets', ['ai_pet_detection', 'pet_focused_detection', 'pet_focused_cleaning', 'pet_picture']],
+      ['Camera & photos', ['ai_obstacle_picture', 'ai_obstacle_image_upload', 'fill_light', 'camera_light_brightness_auto', 'camera_light_brightness']],
+    ]],
+    ['rooms', 'Rooms', 'mdi:floor-plan', 'Per-room suction, water, route and order', []],
+    ['maps', 'Maps', 'mdi:map-outline', 'Floors, saving and rotation', [
+      [null, ['multi_floor_map', 'map_saving', 'map_rotation']],
+    ]],
+    ['schedule', 'Schedule', 'mdi:clock-outline', 'Do not disturb and off-peak charging', [
+      ['Do not disturb', ['dnd', 'dnd_start', 'dnd_end']],
+      ['Off-peak charging', ['off_peak_charging', 'off_peak_charging_start', 'off_peak_charging_end']],
+    ]],
+    ['sound', 'Voice & sound', 'mdi:volume-high', 'Volume, voice prompts and language', [
+      [null, ['volume', 'voice_assistant', 'voice_assistant_language', 'streaming_voice_prompt']],
+    ]],
+    ['system', 'System', 'mdi:cog-outline', 'Child lock and other settings', [
+      ['Safety', ['child_lock']],
+    ]],
+    ['maint', 'Maintenance', 'mdi:wrench-outline', 'Mapping, dock tools and backups', []],
   ];
+  // Buttons for Maintenance, by section; other buttons go to More.
+  const MAINT = [
+    ['Mapping', ['start_mapping', 'start_fast_mapping', 'backup_saved_map']],
+    ['Dock', ['base_station_cleaning', 'base_station_self_repair', 'water_tank_draining']],
+    ['Cleaning', ['start_recleaning']],
+  ];
+  // Buttons the card already offers elsewhere (dock tiles, care resets, warnings).
+  const HIDDEN_BTN = /^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/;
   const DESTRUCTIVE = ['start_mapping', 'start_fast_mapping', 'base_station_self_repair', 'water_tank_draining', 'backup_saved_map', 'start_recleaning'];
 
   /* ------------------------------------------------------------------ */
@@ -243,11 +283,29 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .ring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
 .ring>span{width:42px;height:42px;border-radius:50%;background:var(--dv-bg2);display:grid;place-items:center;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
 /* settings */
-.cols{columns:340px;column-gap:12px}
-.cols>.panel{break-inside:avoid;margin-bottom:12px;display:block}
 .grp{padding:6px 18px 10px}
 .grp-h{display:flex;align-items:center;gap:10px;padding:12px 0 6px}
 .grp-h ha-icon{color:var(--dv-pt)}
+.sset{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:12px;flex:1 1 auto;min-height:0}
+.sset>*{overflow:auto;min-height:0}
+.slist{padding:6px;display:flex;flex-direction:column;gap:2px;align-self:start;max-height:100%}
+.sitem{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;border:0;border-radius:var(--dv-r-md);background:transparent;padding:8px 10px;cursor:pointer;text-align:left;color:var(--dv-text)}
+.sitem:hover{background:var(--dv-bg2)}
+.sitem.on{background:var(--dv-tint)}
+.sitem .sic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--dv-tint);color:var(--dv-pt)}
+.sitem.on .sic{background:var(--dv-pbtn);color:#fff}
+.sitem b{display:block;font-size:15px;font-weight:500}
+.sitem .xs{display:block}
+.sitem>ha-icon:last-child{color:var(--dv-text2)}
+.ph .slist{max-height:none}
+.ph .sitem+.sitem{border-top:1px solid var(--dv-div);border-radius:0}
+.sdet{display:flex;flex-direction:column;gap:18px;padding:2px 2px 12px}
+.sdet>*{width:100%;max-width:820px}
+.sdh{display:flex;align-items:center;gap:14px;padding:6px 4px 0}
+.sdh .sic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--dv-tint);color:var(--dv-pt)}
+.ssec{display:flex;flex-direction:column;gap:8px}
+.ssec>.lbl{padding:0 6px}
+.ssec>.panel{padding:2px 18px}
 /* history */
 .hist{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:12px;height:100%;min-height:0}
 .hlist{overflow:auto;padding:8px}
@@ -872,7 +930,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           const sc = el.querySelector('.chips');
           const left = sc ? sc.scrollLeft : 0;
           const scrollTop = el.scrollTop;
+          const keep = {};
+          el.querySelectorAll('[data-keep]').forEach((k) => { keep[k.dataset.keep] = k.scrollTop; });
           el.innerHTML = html;
+          el.querySelectorAll('[data-keep]').forEach((k) => { if (keep[k.dataset.keep]) k.scrollTop = keep[k.dataset.keep]; });
           this._regions[name] = html;
           const sc2 = el.querySelector('.chips');
           if (sc2) sc2.scrollLeft = left;
@@ -1369,7 +1430,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _phoneHead() {
       const v = this._views().find((x) => x[0] === this._ui.view);
-      return `<button class="ibtn" data-a="view" data-v="clean" aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow" style="font-size:18px">${esc(v ? v[1] : '')}</h1>
+      const cat = this._ui.view === 'settings' ? this._setCat() : null;
+      const back = cat ? 'data-a="setcat" data-v=""' : 'data-a="view" data-v="clean"';
+      return `<button class="ibtn" ${back} aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow ell" style="font-size:18px">${esc(cat ? cat.title : v ? v[1] : '')}</h1>
         ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}${this._bell()}`;
     }
 
@@ -1495,38 +1558,85 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `${head}<div class="stack">${faultHtml}${dock}${partsHtml}${settings}${tools}${lifetime}</div>`;
     }
 
-    _settingsView() {
-      const used = new Set();
-      const groups = [];
+    /** Settings categories with this robot's controls; empty ones are dropped. */
+    _setCats() {
+      const c = this._config;
       const all = Object.entries(this._map).filter(([k]) => !k.includes('.room_'));
-      for (const [gid, title, icon, keys] of GROUPS) {
-        const ids = this._keysFor(keys);
-        ids.forEach((i) => used.add(i));
-        groups.push(this._group(title, icon, ids));
-      }
-      const skip = new Set([...CLEAN_KEYS, ...DOCK_KEYS]);
-      const other = all.filter(([k, id]) => {
+      const used = new Set();
+      const ids = (keys, domains) => this._keysFor(keys.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling), domains);
+      const cats = SETTINGS.map(([id, title, icon, desc, secs]) => {
+        let sections = secs.map(([t, keys]) => ({ title: t, ids: ids(keys) }));
+        if (id === 'maint') {
+          const btns = all.filter(([k]) => k.startsWith('button.') && !HIDDEN_BTN.test(k) && (k !== 'button.water_tank_draining' || c.show_water_tank_draining)).map(([, e]) => e);
+          sections = MAINT.map(([t, keys]) => ({ title: t, ids: ids(keys, ['button']).filter((e) => btns.includes(e)) }));
+          const taken = new Set(sections.flatMap((x) => x.ids));
+          sections.push({ title: 'More', ids: btns.filter((e) => !taken.has(e)) });
+        }
+        sections.forEach((x) => x.ids.forEach((e) => used.add(e)));
+        return { id, title, icon, desc, sections };
+      });
+      // Leftover settings the lists above don't know about go to System › More.
+      const skip = new Set(CLEAN_KEYS);
+      const other = all.filter(([k, e]) => {
         const [d, key] = k.split('.');
-        return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(id) && !skip.has(key);
-      }).map(([, id]) => id);
-      groups.push(this._group('Other', 'mdi:dots-horizontal', other));
-      const actions = all.filter(([k]) => k.startsWith('button.') && !/^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/.test(k) && (k !== 'button.water_tank_draining' || this._config.show_water_tank_draining)).map(([, id]) => id);
-      groups.push(this._group('Actions', 'mdi:play-box-outline', actions));
-      groups.push(this._roomSettings());
-      return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}<div class="cols">${groups.filter(Boolean).join('')}</div>`;
+        return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(e) && !skip.has(key)
+          && (key !== 'auto_water_refilling' || c.show_auto_water_refilling);
+      }).map(([, e]) => e);
+      cats.find((x) => x.id === 'system').sections.push({ title: 'More', ids: other });
+      const roomKeys = Object.keys(this._map).filter((k) => /^(switch|select|number|time)\.room_\d+_/.test(k));
+      const out = cats.map((cat) => {
+        cat.sections = cat.sections.filter((x) => x.ids.length);
+        cat.count = cat.id === 'rooms' ? roomKeys.length : cat.sections.reduce((n, x) => n + x.ids.length, 0);
+        return cat;
+      }).filter((cat) => cat.count && (cat.id !== 'rooms' || this._rooms().length));
+      return out;
+    }
+
+    /** The open category. Phone shows the list until one is picked; wider layouts open the first. */
+    _setCat() {
+      const cats = this._setCats();
+      const cur = cats.find((x) => x.id === this._ui.setcat);
+      if (cur) return cur;
+      return this._layout() === 'phone' ? null : cats[0] || null;
+    }
+
+    _settingsView() {
+      const cats = this._setCats();
+      const lay = this._layout();
+      const cur = this._setCat();
+      if (!cats.length) return `${this._viewHead('Settings')}<section class="panel pad muted">No settings found for this robot.</section>`;
+      const list = `<nav class="panel slist" aria-label="Settings categories">${cats.map((cat) => {
+        const on = cur && cat.id === cur.id && lay !== 'phone';
+        return `<button class="sitem ${on ? 'on' : ''}" data-a="setcat" data-v="${cat.id}" ${on ? 'aria-current="true"' : ''}><span class="sic">${ic(cat.icon)}</span>
+          <span class="grow" style="min-width:0"><b>${esc(cat.title)}</b><span class="xs muted ell">${esc(cat.desc)}</span></span>${ic('mdi:chevron-right')}</button>`;
+      }).join('')}</nav>`;
+      if (lay === 'phone') return cur ? `<div class="sdet">${this._setDetail(cur)}</div>` : list;
+      return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}
+        <div class="sset">${list}<div class="sdet" data-keep="set-${cur.id}">${this._setDetail(cur)}</div></div>`;
+    }
+
+    _setDetail(cat) {
+      const head = this._layout() === 'phone' ? '' : `<div class="sdh"><span class="sic">${ic(cat.icon)}</span><div><h2 class="h" style="font-size:20px">${esc(cat.title)}</h2>
+        <div class="small muted" style="margin-top:2px">${esc(cat.desc)}</div></div></div>`;
+      if (cat.id === 'rooms') return head + this._roomSettings();
+      return head + cat.sections.map((x) => `<section class="ssec">${x.title ? `<h3 class="lbl" style="margin:0">${esc(x.title)}</h3>` : ''}
+        <div class="panel">${x.ids.map((e) => this._control(e)).join('')}</div></section>`).join('');
     }
 
     _roomSettings() {
       const rooms = this._rooms();
       if (!rooms.length) return '';
-      const rid = this._ui.room ?? rooms[0].id;
+      const rid = rooms.some((r) => r.id === this._ui.room) ? this._ui.room : rooms[0].id;
       const pre = `room_${rid}_`;
-      const ids = Object.entries(this._map).filter(([k]) => k.split('.')[1]?.startsWith(pre)).map(([, id]) => id);
-      if (!ids.length && !Object.keys(this._map).some((k) => k.includes('.room_'))) return '';
-      const rows = ids.map((id) => this._control(id, human(id.split('.')[1].split(pre)[1] || ''))).join('');
-      return `<section class="panel grp"><div class="grp-h">${ic('mdi:floor-plan')}<h2 class="h grow">Rooms</h2>
-        <select class="sel" data-a="setroom" aria-label="Room">${rooms.map((r) => `<option value="${r.id}" ${r.id === rid ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
-        ${rows || '<div class="row small muted">No per-room settings for this room.</div>'}</section>`;
+      const order = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleaning_times', 'order', 'floor_material', 'floor_material_direction', 'name'];
+      const rank = (k) => { const i = order.indexOf(k); return i < 0 ? order.length : i; };
+      const ids = Object.entries(this._map).filter(([k]) => /^(switch|select|number|time)\./.test(k) && k.split('.')[1]?.startsWith(pre))
+        .map(([k, id]) => [k.split('.')[1].slice(pre.length), id]).sort((x, y) => rank(x[0]) - rank(y[0]));
+      const rows = ids.map(([k, id]) => this._control(id, human(k))).join('');
+      const chips = `<div class="chips wrap" style="justify-content:flex-start">${rooms.map((r) => `<button class="chip ${r.id === rid ? 'on' : ''}" aria-pressed="${r.id === rid}" data-a="setroom" data-v="${r.id}">${esc(r.name)}</button>`).join('')}</div>`;
+      return `<section class="ssec"><h3 class="lbl" style="margin:0">Room</h3>${chips}</section>
+        <section class="ssec"><h3 class="lbl" style="margin:0">${esc((rooms.find((r) => r.id === rid) || {}).name || '')}</h3>
+        <div class="panel">${rows || '<div class="row small muted">No per-room settings for this room.</div>'}</div></section>`;
     }
 
     _historyItems() {
@@ -1584,9 +1694,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const v = el.dataset.v;
       const e = el.dataset.e;
       const u = this._ui;
-      if (['optsel', 'num', 'time', 'setroom'].includes(a)) return; // handled on change
+      if (['optsel', 'num', 'time'].includes(a)) return; // handled on change
       switch (a) {
-        case 'view': u.view = v === 'dock' ? 'care' : v; u.pop = null; break;
+        case 'view': u.view = v === 'dock' ? 'care' : v; u.pop = null; if (u.view === 'settings') u.setcat = null; break;
+        case 'setcat': {
+          u.setcat = v || null;
+          const vw = this.shadowRoot.querySelector('[data-r="view"]');
+          if (vw) vw.scrollTop = 0; // open a category, or go back to the list, at the top
+          break;
+        }
+        case 'setroom': u.room = Number(v); break;
         case 'target': u.target = v; break;
         case 'room': {
           const id = Number(v);
@@ -1628,7 +1745,6 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (a === 'optsel') this._call('select', 'select_option', { entity_id: e, option: el.value });
       else if (a === 'num') this._call('number', 'set_value', { entity_id: e, value: Number(el.value) });
       else if (a === 'time') this._call('time', 'set_value', { entity_id: e, time: `${el.value}:00` });
-      else if (a === 'setroom') { this._ui.room = Number(el.value); this._schedule(); }
     }
 
     _onDown(ev) {

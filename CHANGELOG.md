@@ -1,7 +1,15 @@
 # Changelog
 
-## 0.2.4
+## 0.3.0
 
+- **Settings menu.** Settings are now a menu like Home Assistant's own: Cleaning, Mopping,
+  Carpet, Dock, Obstacle avoidance, Rooms, Maps, Schedule, Voice & sound, System and
+  Maintenance, each split into short titled sections. Desktop and tablet show the menu and
+  the open category side by side; on a phone each category opens as its own screen with a
+  back arrow. Categories your robot has nothing for are hidden.
+- **Rooms settings** pick the room with chips, and list each room's settings in a fixed order
+  (mode, suction, wetness, route, passes, order, floor).
+- Toggling a setting no longer scrolls the settings pane back to the top.
 - **Dock & care on one page.** The Dock and Care pages are merged. Dock status, actions,
   settings and tools sit next to parts and lifetime totals, without the repeated status line
   and the separate drying panel.

@@ -42,8 +42,10 @@ own way back out. See [What's new](CHANGELOG.md).
   the robot reports a fault or problem. You can reset the counter, clear the warning, or snooze the alert
   for a day.
 - **Settings, generated from your robot.** Every switch, select, number and time entity the
-  integration creates is grouped into Cleaning, Mopping, Carpet, Obstacle avoidance,
-  Schedule & sound, General and Rooms. If your model has it, it shows up.
+  integration creates is sorted into a menu like Home Assistant's: Cleaning, Mopping, Carpet,
+  Dock, Obstacle avoidance, Rooms, Maps, Schedule, Voice & sound, System and Maintenance.
+  Desktop and tablet show the menu and the open category side by side; a phone opens each
+  category on its own screen. If your model has it, it shows up.
 - **History.** Recent cleaning runs with their maps, plus obstacle photos.
 - **Remote control.** A direction pad you press and hold to drive the robot, with three speeds.
 - **Full screen and kiosk friendly.** In a panel view the card pins itself to the visible screen
