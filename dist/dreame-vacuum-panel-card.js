@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */

@@ -13,11 +13,38 @@ own way back out. See [What's new](CHANGELOG.md).
 
 [![hacs][hacs-badge]][hacs-url] ![license][license-badge]
 
-![Desktop layout](docs/images/desktop-light-clean.png)
+![Desktop layout](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/desktop-light-clean.png)
 
 | Tablet | Phone | Phone · Dock |
 | --- | --- | --- |
-| ![Tablet](docs/images/tablet-light-clean.png) | ![Phone](docs/images/phone-dark-clean.png) | ![Phone dock tab](docs/images/phone-dark-dock.png) |
+| ![Tablet](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/tablet-light-clean.png) | ![Phone](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/phone-dark-clean.png) | ![Phone dock tab](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/phone-dark-dock.png) |
+
+<details>
+<summary><b>More screenshots</b></summary>
+
+**Dark theme**
+
+![Desktop, dark theme](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/desktop-dark-clean.png)
+
+**Zone cleaning:** drag on the map to draw a zone, then pick 1–3 passes.
+
+![Zone cleaning](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/desktop-light-zone.png)
+
+**Dock & care:** dock status, actions and settings next to parts and lifetime totals.
+
+![Dock and care](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/desktop-light-care.png)
+
+**Settings:** a menu of categories next to the open category.
+
+![Settings](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/desktop-light-settings.png)
+
+| Phone · Dock & care | Phone · Settings | Phone · Settings › Dock |
+| --- | --- | --- |
+| ![Phone dock and care](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/phone-dark-care.png) | ![Phone settings menu](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/phone-dark-settings.png) | ![Phone dock settings](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/phone-dark-settings-dock.png) |
+
+The screenshots use a made-up floor plan. To retake them, see [`tools/screenshots`](tools/screenshots/shoot.js).
+
+</details>
 
 ## Features
 
@@ -179,7 +206,11 @@ Things we found while testing on a real robot (Dreame with a self-wash, auto-emp
 - **Selections land in the wrong place.** The card uses the camera's `calibration_points`.
   If you rotate the map in the integration, give the camera a moment to update.
 - **A setting is missing.** Check that the entity is enabled in **Settings → Entities**.
-  Disabled entities are skipped.
+  Disabled entities are skipped. Settings the card doesn't recognise are listed under
+  **System › More**.
+- **A part is missing from Dock & care.** The card lists a part only when the integration
+  creates a sensor for it (`sensor.<name>_<part>_left`), so parts your model doesn't have stay
+  hidden. If yours is missing, check that its sensor is enabled.
 
 ## Roadmap
 
