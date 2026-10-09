@@ -13,6 +13,8 @@ own way back out. See [What's new](CHANGELOG.md).
 
 [![hacs][hacs-badge]][hacs-url] ![license][license-badge]
 
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=The-Croz&repository=dreame-vacuum-panel-card&category=plugin)
+
 ![Desktop layout](https://raw.githubusercontent.com/The-Croz/dreame-vacuum-panel-card/main/docs/images/desktop-light-clean.png)
 
 | Tablet | Phone | Phone · Dock |
@@ -89,6 +91,13 @@ The screenshots use a made-up floor plan. To retake them, see [`tools/screenshot
 ## Installation
 
 ### HACS (recommended)
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=The-Croz&repository=dreame-vacuum-panel-card&category=plugin)
+
+The button opens this card in HACS on your own Home Assistant. Choose **Download**, then
+reload your browser.
+
+Or add it by hand:
 
 1. In HACS, open the menu (⋮) and choose **Custom repositories**.
 2. Add `https://github.com/The-Croz/dreame-vacuum-panel-card` with the type **Dashboard**.
