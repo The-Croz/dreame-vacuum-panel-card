@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.4
+
+- **Dock & care on one page.** The Dock and Care pages are merged. Dock status, actions,
+  settings and tools sit next to parts and lifetime totals, without the repeated status line
+  and the separate drying panel.
+- **Status bar.** The state is larger, the suction and wetness summary is gone (it is already
+  in the Cleaning panel), and the "1 care alert" chip is now the same bell with a badge that
+  the phone layout uses.
+- **Dock levels** are an even grid (2 × 2 for four) with an icon for each level.
+- **Wetness** labels no longer have bars over them; the current band is highlighted.
+- **Parts your robot doesn't have are hidden.** Some models report parts they lack (an
+  L20 Ultra lists a silver-ion module). The card now lists only parts that have a sensor.
+
 ## 0.2.3
 
 - **Corners stay rounded under any theme.** 0.2.2 read Home Assistant's radius variables, and a

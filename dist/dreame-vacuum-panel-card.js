@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.2.3';
+  const VERSION = '0.2.4';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -187,9 +187,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .range input{flex:1;accent-color:var(--dv-pbtn);height:28px}
 .wet{width:100%;accent-color:var(--dv-pbtn);height:28px;margin:0}
 .thirds{display:flex;font-size:12px;color:var(--dv-text2);text-align:center;margin-top:2px}
-.thirds span{min-width:0;border-top:3px solid var(--dv-div);padding-top:3px}
-.thirds span+span{margin-left:2px}
-.thirds .on{border-top-color:var(--dv-p)}
+.thirds span{min-width:0;padding-top:2px}
 .thirds .on{color:var(--dv-pt);font-weight:600}
 .range span{font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
 /* map */
@@ -227,19 +225,23 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .alert{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--dv-r);background:var(--dv-warnbg);border:0;width:100%;text-align:left;cursor:pointer;color:var(--dv-text)}
 .alert.crit{background:var(--dv-errbg)}
 /* levels */
-.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
-.lv{padding:8px 10px;border-radius:var(--dv-r-md);background:var(--dv-bg2);font-size:12px;min-width:0}
-.lv b{display:block;font-weight:500;margin-top:2px;font-size:13px}
+.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.levels.n1{grid-template-columns:1fr}
+.levels.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.lv{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--dv-r-md);background:var(--dv-bg2);font-size:12px;min-width:0}
+.lv ha-icon{--mdc-icon-size:20px;color:var(--dv-text2)}
+.lv>span{min-width:0}
+.lv b{display:block;font-weight:500;margin-top:1px;font-size:14px;color:var(--dv-text)}
+.lv.warn ha-icon{color:var(--dv-warnt)}.lv.err ha-icon{color:var(--dv-errt)}.lv.ok ha-icon{color:var(--dv-ok)}
 .lv.warn{background:var(--dv-warnbg)}.lv.warn b{color:var(--dv-warnt)}
 .lv.err{background:var(--dv-errbg)}.lv.err b{color:var(--dv-errt)}
 .lv.ok b{color:var(--dv-ok)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 /* care */
-.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.ring{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
-.ring>span{width:52px;height:52px;border-radius:50%;background:var(--dv-bg);display:grid;place-items:center;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
-.stat b{display:block;font-size:24px;font-weight:400;margin-top:4px}
+.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.part{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--dv-r-md);background:var(--dv-bg2);min-width:0}
+.ring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.ring>span{width:42px;height:42px;border-radius:50%;background:var(--dv-bg2);display:grid;place-items:center;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
 /* settings */
 .cols{columns:340px;column-gap:12px}
 .cols>.panel{break-inside:avoid;margin-bottom:12px;display:block}
@@ -290,9 +292,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .st .meta span{display:inline-flex;align-items:center;gap:6px}
 .st .meta ha-icon{--mdc-icon-size:16px}
 .st .meta b{color:var(--dv-text);font-weight:500}
-.carechip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--dv-warnt);background:var(--dv-warnbg);padding:0 12px;min-height:32px;border-radius:var(--dv-pill);border:0;cursor:pointer}
-.carechip.crit{color:var(--dv-errt);background:var(--dv-errbg)}
-.carechip ha-icon{--mdc-icon-size:16px}
+.st .state{display:inline-flex;align-items:center;gap:8px;font-size:17px;font-weight:500;color:var(--dv-text)}
+.st .state .dot{width:10px;height:10px}
+.ibtn.on{background:var(--dv-tint);color:var(--dv-pt)}
+.ibtn .badge{top:2px;right:2px}
 /* ---------- tablet ---------- */
 .tab{display:flex;flex-direction:column;height:100%}
 .tab-scroll{flex:1 1 auto;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px;min-height:0}
@@ -606,9 +609,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _consumables() {
       const a = this._a;
       const out = [];
+      // The integration reports some parts as attributes even on models without them (an L20 Ultra
+      // lists silver_ion_left but has no silver-ion module). It only creates a sensor for parts the
+      // robot has, so when this robot has part sensors, list only the parts that have one.
+      const hasSensors = Object.keys(this._map || {}).some((k) => /^sensor\.(?!drying_).+(?<!_time)_left$/.test(k));
       for (const [k, v] of Object.entries(a)) {
         if (!k.endsWith('_left') || k.endsWith('_time_left') || k === 'drying_left') continue;
         const key = k.slice(0, -5);
+        if (hasSensors && !this._id('sensor', k)) continue;
         const p = num(v);
         if (p === null) continue;
         const sens = this._live('sensor', `${key}_time_left`);
@@ -944,8 +952,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _views() {
       return [
         ['clean', 'Clean', 'mdi:robot-vacuum'],
-        ['dock', 'Dock', 'mdi:home-lightning-bolt-outline'],
-        ['care', 'Care', 'mdi:wrench-outline'],
+        ['care', 'Dock & care', 'mdi:home-lightning-bolt-outline'],
         ['settings', 'Settings', 'mdi:tune-variant'],
         ['history', 'History', 'mdi:history'],
         ['remote', 'Remote', 'mdi:gamepad-variant-outline'],
@@ -996,11 +1003,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return `<button class="${cls}" data-a="run" ${dis ? 'disabled' : ''} ${extra}>${ic(icon)}${label}</button>`;
     }
 
-    _careChip() {
-      const notes = this._notes();
-      if (!notes.length) return '';
-      const crit = notes.some((x) => x.level === 'crit');
-      return `<button class="carechip ${crit ? 'crit' : ''}" data-a="pop" data-v="care">${ic('mdi:bell-alert-outline')}${notes.length} care ${notes.length === 1 ? 'alert' : 'alerts'}</button>`;
+    /** Care alerts bell, the same one the phone layout shows. */
+    _bell(cls = 'ibtn') {
+      const n = this._notes().length;
+      return `<button class="${cls} ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts${n ? `, ${n} new` : ''}" title="Care alerts">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>`;
     }
 
     _statusBlock() {
@@ -1010,28 +1016,22 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const prog = num(a.cleaning_progress);
       const area = this._measure('cleaned_area', 'cleaned_area', 'm²');
       const time = this._measure('cleaning_time', 'cleaning_time', 'min');
-      const ssel = this._select('suction_level');
-      const hsel = this._select('mop_pad_humidity') || this._select('water_volume');
-      const suction = ssel ? this._opt(ssel.so, ssel.value, false) : (a.suction_level || '');
-      const hum = this._wet() ? this._wet().name : (hsel ? this._opt(hsel.so, hsel.value, false) : '');
-      const lay = this._layout();
       const showProg = (s.running || s.paused) && prog !== null;
       return `<div class="st">
         <div class="stack-s grow">
-          <div class="rowf" style="flex-wrap:wrap">
-            <h1 class="h" style="font-size:20px">${esc(this._title())}</h1>
-            <span class="rowf small muted"><span class="dot ${s.dot}"></span>${esc(s.text)}</span>
-            <span class="grow"></span>${this._careChip()}
+          <div class="rowf" style="flex-wrap:wrap;gap:6px 16px">
+            <h1 class="h" style="font-size:22px">${esc(this._title())}</h1>
+            <span class="state"><span class="dot ${s.dot}"></span>${esc(s.text)}</span>
           </div>
           ${showProg ? `<div class="rowf"><div class="bar grow"><i style="width:${clamp(prog, 0, 100)}%"></i></div><span class="small" style="font-variant-numeric:tabular-nums">${prog}%</span></div>` : ''}
           <div class="meta">
             ${bat.v !== null ? `<span>${ic(bat.icon)}<b>${bat.v}%</b> battery</span>` : ''}
             ${area ? `<span>${ic('mdi:texture-box')}<b>${esc(area.text)}</b> ${s.running || s.paused ? 'cleaned' : 'last run'}</span>` : ''}
             ${time ? `<span>${ic('mdi:timer-outline')}<b>${esc(time.text)}</b></span>` : ''}
-            ${lay === 'desktop' && suction ? `<span>${ic('mdi:fan')}${esc(suction)}${hum ? ` · ${esc(hum)}` : ''}</span>` : ''}
           </div>
         </div>
         <div class="rowf">
+          ${this._bell()}
           <button class="ibtn" data-a="svc" data-v="locate" aria-label="Locate robot" title="Locate">${ic('mdi:map-marker-radius-outline')}</button>
           <button class="ibtn" data-a="svc" data-v="return_to_base" aria-label="Send to dock" title="Send to dock">${ic('mdi:home-import-outline')}</button>
           <button class="ibtn" data-a="svc" data-v="stop" aria-label="Stop" title="Stop">${ic('mdi:stop')}</button>
@@ -1154,19 +1154,20 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _levels() {
       const a = this._a;
       const lv = [];
-      const tank = (k, label) => {
+      const item = (cls, icon, label, value) => lv.push(`<div class="lv ${cls}">${ic(icon)}<span><span class="muted">${label}</span><b>${esc(value)}</b></span></div>`);
+      const tank = (k, label, icon) => {
         const v = a[k];
         if (v === undefined) return;
         const ok = /^(installed|normal|ok)$/i.test(String(v));
-        lv.push(`<div class="lv ${ok ? 'ok' : 'warn'}"><span class="muted">${label}</span><b>${ok ? 'OK' : esc(human(v))}</b></div>`);
+        item(ok ? '' : 'warn', icon, label, ok ? 'OK' : human(v));
       };
-      if (a.low_water_warning && !/no warning/i.test(a.low_water_warning)) lv.push(`<div class="lv warn"><span class="muted">Clean water</span><b>${esc(human(a.low_water_warning))}</b></div>`);
-      else tank('clean_water_tank_status', 'Clean water');
-      tank('dirty_water_tank_status', 'Dirty water');
-      tank('dust_bag_status', 'Dust bag');
+      if (a.low_water_warning && !/no warning/i.test(a.low_water_warning)) item('warn', 'mdi:water-alert-outline', 'Clean water', human(a.low_water_warning));
+      else tank('clean_water_tank_status', 'Clean water', 'mdi:water-outline');
+      tank('dirty_water_tank_status', 'Dirty water', 'mdi:cup-water');
+      tank('dust_bag_status', 'Dust bag', 'mdi:delete-outline');
       const det = num(a.detergent_left);
-      if (det !== null) lv.push(`<div class="lv ${det <= (this._config.care_warning ?? 20) ? 'warn' : ''}"><span class="muted">Detergent</span><b>${det}%</b></div>`);
-      return lv.length ? `<div class="levels">${lv.join('')}</div>` : '';
+      if (det !== null) item(det <= (this._config.care_warning ?? 20) ? 'warn' : '', 'mdi:bottle-tonic-outline', 'Detergent', `${det}%`);
+      return lv.length ? `<div class="levels n${lv.length}">${lv.join('')}</div>` : '';
     }
 
     _dockActions() {
@@ -1194,7 +1195,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const prog = a.drying ? num(a.drying_progress) : null;
       return `<div class="stack" style="gap:14px">
         <div class="between"><div class="grow"><h2 class="h">Dock</h2><div class="small muted" style="margin-top:2px">${esc(this._dockState())}</div></div>
-          ${this._ui.view === 'dock' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="dock">Dock settings</button>`}</div>
+          ${this._ui.view === 'care' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="care">Dock & care</button>`}</div>
         ${prog !== null ? `<div class="bar"><i style="width:${clamp(prog, 0, 100)}%"></i></div>` : ''}
         ${this._levels()}
         ${this._dockActions()}
@@ -1315,12 +1316,11 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _phoneTop() {
       const s = this._status();
       const bat = this._battery();
-      const n = this._notes().length;
       const nav = this._haNav('fab');
       return `${nav}<div class="spill"><span class="dot ${s.dot}"></span><div class="grow">
           <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
           <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
-        <button class="fab ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts, ${n} new">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>
+        ${this._bell('fab')}
         <button class="fab ${this._ui.pop === 'menu' ? 'on' : ''}" data-a="pop" data-v="menu" aria-label="More">${ic('mdi:dots-vertical')}</button>`;
     }
 
@@ -1370,13 +1370,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _phoneHead() {
       const v = this._views().find((x) => x[0] === this._ui.view);
       return `<button class="ibtn" data-a="view" data-v="clean" aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow" style="font-size:18px">${esc(v ? v[1] : '')}</h1>
-        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}<button class="ibtn" data-a="pop" data-v="care" aria-label="Care alerts">${ic('mdi:bell-outline')}${this._notes().length ? `<span class="badge">${this._notes().length}</span>` : ''}</button>`;
+        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}${this._bell()}`;
     }
 
     /* ---------- full views ---------- */
     _viewBody() {
       switch (this._ui.view) {
-        case 'dock': return this._dockView();
         case 'care': return this._careView();
         case 'settings': return this._settingsView();
         case 'history': return this._historyView();
@@ -1446,31 +1445,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return out;
     }
 
-    _dockView() {
-      const a = this._a;
+    /** Dock and care on one page: dock status, actions and settings next to parts and totals. */
+    _careView() {
       const lay = this._layout();
       const c = this._config;
-      const ids = this._keysFor(DOCK_KEYS.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling));
-      const extraBtns = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'].filter((k) => k !== 'water_tank_draining' || c.show_water_tank_draining), ['button']);
-      return `${this._viewHead('Dock', this._dockState())}
-        <div style="display:grid;grid-template-columns:${lay === 'desktop' ? 'minmax(320px,420px) minmax(0,1fr)' : '1fr'};gap:12px;align-items:start">
-          <div class="stack"><section class="panel pad">${this._dockBlock(lay === 'phone')}</section>
-          ${a.drying ? `<section class="panel pad"><div class="between"><span class="h">Drying</span><span class="small muted">${num(a.drying_progress) ?? 0}%</span></div><div class="bar" style="margin-top:10px"><i style="width:${clamp(num(a.drying_progress) || 0, 0, 100)}%"></i></div></section>` : ''}
-          ${this._group('Dock tools', 'mdi:toolbox-outline', extraBtns)}</div>
-          <div class="cols">${this._group('Dock settings', 'mdi:home-lightning-bolt-outline', ids) || '<section class="panel pad muted">No dock settings found for this robot.</section>'}</div>
-        </div>`;
-    }
-
-    _careView() {
       const parts = this._consumables();
       const notes = this._notes();
-      const warn = Number(this._config.care_warning ?? 20), crit = Number(this._config.care_critical ?? 10);
+      const warn = Number(c.care_warning ?? 20), crit = Number(c.care_critical ?? 10);
       const faults = notes.filter((n) => n.id.startsWith('fault_') || n.id === 'error');
-      const stat = (key, attr, label, fmt) => {
+      const stat = (key, attr, label, icon, fmt) => {
         const s = this._live('sensor', key);
         const raw = s ? s.state : this._a[attr];
         if (raw === undefined || raw === null) return '';
-        return `<div class="stat"><div class="lbl">${label}</div><b>${esc(fmt ? fmt(raw, s) : raw)}</b></div>`;
+        return `<div class="lv">${ic(icon)}<span><span class="muted">${label}</span><b>${esc(fmt ? fmt(raw, s) : raw)}</b></span></div>`;
       };
       const mins = (v, s) => {
         const u = s?.attributes?.unit_of_measurement || 'min';
@@ -1479,24 +1466,33 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return `${n.toLocaleString()} ${u}`;
       };
       const stats = [
-        stat('total_cleaning_time', 'total_cleaning_time', 'Total cleaning time', mins),
-        stat('cleaning_count', 'cleaning_count', 'Cleanings', (v) => Number(v).toLocaleString()),
-        stat('total_cleaned_area', 'total_cleaned_area', 'Total area', (v, s) => `${Math.round(Number(v)).toLocaleString()} ${s?.attributes?.unit_of_measurement || 'm²'}`),
-        stat('first_cleaning_date', 'first_cleaning_date', 'First cleaning', (v) => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleDateString(); }),
-      ].join('');
-      return `${this._viewHead('Care', 'Parts, warnings and lifetime totals')}
-        <div class="stack">
-          ${faults.map((n) => `<div class="alert crit" style="cursor:default">${ic(n.icon, 'style="color:var(--dv-errt)"')}<span class="grow"><b style="font-weight:500;display:block">${esc(n.title)}</b><span class="xs muted">${esc(n.desc)}</span></span>${n.action ? `<button class="btn sm" data-a="${n.action.a}" data-e="${n.action.e || ''}">${esc(n.action.label)}</button>` : ''}</div>`).join('')}
-          <div class="parts">${parts.map((p) => {
-            const color = p.pct <= crit ? 'var(--dv-err)' : p.pct <= warn ? 'var(--dv-warn)' : 'var(--dv-p)';
-            const tcol = p.pct <= crit ? 'var(--dv-errt)' : p.pct <= warn ? 'var(--dv-warnt)' : 'var(--dv-text2)';
-            return `<section class="panel pad stack" style="gap:14px"><div class="rowf" style="gap:14px">
-              <div class="ring" style="background:conic-gradient(${color} ${p.pct}%, var(--dv-bg2) 0)" role="img" aria-label="${esc(p.name)} ${p.pct}%"><span>${p.pct}%</span></div>
-              <div class="grow"><h2 class="h" style="font-size:15px">${esc(p.name)}</h2><div class="small" style="margin-top:4px;color:${tcol}">${p.timeLeft !== null ? `${p.timeLeft} ${esc(p.unit)} left` : ''}</div></div></div>
-              <div class="between"><span class="xs muted">${ic(p.icon, 'style="--mdc-icon-size:16px;vertical-align:-3px"')}</span><button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="Reset ${esc(p.name)}">Reset</button></div></section>`;
-          }).join('') || '<section class="panel pad muted">No consumable data reported.</section>'}</div>
-          ${stats ? `<section class="panel pad stack"><h2 class="h">Lifetime</h2><div class="stats">${stats}</div></section>` : ''}
-        </div>`;
+        stat('total_cleaning_time', 'total_cleaning_time', 'Cleaning time', 'mdi:timer-outline', mins),
+        stat('cleaning_count', 'cleaning_count', 'Cleanings', 'mdi:counter', (v) => Number(v).toLocaleString()),
+        stat('total_cleaned_area', 'total_cleaned_area', 'Total area', 'mdi:texture-box', (v, s) => `${Math.round(Number(v)).toLocaleString()} ${s?.attributes?.unit_of_measurement || 'm²'}`),
+        stat('first_cleaning_date', 'first_cleaning_date', 'First cleaning', 'mdi:calendar-start', (v) => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleDateString(); }),
+      ].filter(Boolean);
+      const settingIds = this._keysFor(DOCK_KEYS.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling));
+      const toolIds = this._keysFor(['base_station_cleaning', 'water_tank_draining', 'base_station_self_repair'].filter((k) => k !== 'water_tank_draining' || c.show_water_tank_draining), ['button']);
+
+      const faultHtml = faults.map((n) => `<div class="alert crit" style="cursor:default">${ic(n.icon, 'style="color:var(--dv-errt)"')}<span class="grow"><b style="font-weight:500;display:block">${esc(n.title)}</b><span class="xs muted">${esc(n.desc)}</span></span>${n.action ? `<button class="btn sm" data-a="${n.action.a}" data-e="${n.action.e || ''}">${esc(n.action.label)}</button>` : ''}</div>`).join('');
+      const dock = `<section class="panel pad">${this._dockBlock(lay === 'phone')}</section>`;
+      const partsHtml = `<section class="panel pad stack" style="gap:14px"><h2 class="h">Parts</h2><div class="parts">${parts.map((p) => {
+        const color = p.pct <= crit ? 'var(--dv-err)' : p.pct <= warn ? 'var(--dv-warn)' : 'var(--dv-p)';
+        const tcol = p.pct <= crit ? 'var(--dv-errt)' : p.pct <= warn ? 'var(--dv-warnt)' : 'var(--dv-text2)';
+        return `<div class="part"><div class="ring" style="background:conic-gradient(${color} ${p.pct}%, var(--dv-div) 0)" role="img" aria-label="${esc(p.name)} ${p.pct}%"><span>${p.pct}%</span></div>
+          <div class="grow"><div class="rowf" style="gap:6px">${ic(p.icon, 'style="--mdc-icon-size:16px;color:var(--dv-text2)"')}<b class="ell" style="font-weight:500;font-size:14px">${esc(p.name)}</b></div>
+          <div class="xs" style="margin-top:2px;color:${tcol}">${p.timeLeft !== null ? `${p.timeLeft} ${esc(p.unit)} left` : '&nbsp;'}</div></div>
+          <button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="Reset ${esc(p.name)}">Reset</button></div>`;
+      }).join('') || '<span class="muted small">No consumable data reported.</span>'}</div></section>`;
+      const lifetime = stats.length ? `<section class="panel pad stack" style="gap:14px"><h2 class="h">Lifetime</h2><div class="levels n${stats.length}">${stats.join('')}</div></section>` : '';
+      const settings = this._group('Dock settings', 'mdi:tune-variant', settingIds);
+      const tools = this._group('Dock tools', 'mdi:toolbox-outline', toolIds);
+      const head = this._viewHead('Dock & care', 'Dock, parts and lifetime totals');
+      if (lay === 'desktop') {
+        return `${head}<div class="stack">${faultHtml}<div style="display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:12px;align-items:start">
+          <div class="stack">${dock}${settings}${tools}</div><div class="stack">${partsHtml}${lifetime}</div></div></div>`;
+      }
+      return `${head}<div class="stack">${faultHtml}${dock}${partsHtml}${settings}${tools}${lifetime}</div>`;
     }
 
     _settingsView() {
@@ -1590,7 +1586,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const u = this._ui;
       if (['optsel', 'num', 'time', 'setroom'].includes(a)) return; // handled on change
       switch (a) {
-        case 'view': u.view = v; u.pop = null; break;
+        case 'view': u.view = v === 'dock' ? 'care' : v; u.pop = null; break;
         case 'target': u.target = v; break;
         case 'room': {
           const id = Number(v);

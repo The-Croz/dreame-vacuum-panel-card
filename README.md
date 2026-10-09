@@ -36,6 +36,8 @@ own way back out. See [What's new](CHANGELOG.md).
   passes. These only appear when your robot supports them.
 - **Dock.** Water tank, dust bag and detergent status, plus Empty bin, Wash mops, Dry mops and
   every dock setting. While a mop wash runs you get Pause, Resume and Stop wash.
+- **Dock & care.** One page for dock status, dock settings, parts and lifetime totals.
+  Parts your model doesn't have are left out.
 - **Care alerts.** A badge and a bell show up when a part runs low; a banner shows up when
   the robot reports a fault or problem. You can reset the counter, clear the warning, or snooze the alert
   for a day.
