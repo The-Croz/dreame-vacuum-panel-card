@@ -92,17 +92,15 @@ The screenshots use a made-up floor plan. To retake them, see [`tools/screenshot
 
 ### HACS (recommended)
 
+The card is in the default HACS catalog:
+
+1. Open **HACS** in Home Assistant.
+2. Search for **Dreame Vacuum Panel Card** and download it.
+3. Reload your browser.
+
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=The-Croz&repository=dreame-vacuum-panel-card&category=plugin)
 
-The button opens this card in HACS on your own Home Assistant. Choose **Download**, then
-reload your browser.
-
-Or add it by hand:
-
-1. In HACS, open the menu (⋮) and choose **Custom repositories**.
-2. Add `https://github.com/The-Croz/dreame-vacuum-panel-card` with the type **Dashboard**.
-3. Search for **Dreame Vacuum Panel Card** and download it.
-4. Reload your browser.
+The button above jumps straight to the card in HACS on your own Home Assistant.
 
 ### Manual
 
@@ -237,6 +235,6 @@ Things we found while testing on a real robot (Dreame with a self-wash, auto-emp
 
 MIT
 
-[hacs-badge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
-[hacs-url]: https://hacs.xyz/docs/faq/custom_repositories
+[hacs-badge]: https://img.shields.io/badge/HACS-Default-41BDF5.svg
+[hacs-url]: https://hacs.xyz
 [license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
