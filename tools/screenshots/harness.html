@@ -105,6 +105,7 @@ add(`camera.${P}_map`, 'idle', { entity_picture: dark ? 'map-dark.png' : 'map.pn
 const hass = {
   states: st, entities: ent, devices: { dev: { name: 'Beep-0' } },
   config: { unit_system: { length: 'mi', area: 'ft²' } }, callService: async () => {},
+  locale: { language: q.get('lang') || 'en' }, // pinned so the screenshots don't follow the browser's language
 };
 const card = document.createElement('dreame-vacuum-panel-card');
 card.setConfig({ entity: `vacuum.${P}`, fullscreen: false, height: '100vh' });
