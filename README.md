@@ -62,7 +62,7 @@ The screenshots use a made-up floor plan. To retake them, see [`tools/screenshot
   page in All rooms and Rooms (a tap still picks a room), and only draws the zone or places the
   spot in Zone and Spot. With a mouse, scroll to zoom and drag to move the zoomed map.
 - **All rooms, Rooms, Zone or Spot.** Drag to draw a zone, or tap to place a spot, then choose
-  1–3 passes.
+  1–3 passes. Drag a drawn zone to move it, or one of its corner handles to resize it.
 - **Cleaning settings.** CleanGenius, per-room settings, cleaning mode, suction (Quiet,
   Standard, Turbo, Max), a 1–32 wetness slider (or mop humidity / water volume), route and
   passes. These only appear when your robot supports them.

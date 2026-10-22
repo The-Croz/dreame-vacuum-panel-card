@@ -254,7 +254,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .pill{position:absolute;transform:translate(-50%,-50%) scale(var(--dv-iz,1));display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px 0 4px;border-radius:var(--dv-pill);background:var(--dv-pbtn);color:#fff;font-size:13px;font-weight:500;border:2px solid rgba(255,255,255,.85);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
 .pill b{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.28);display:grid;place-items:center;font-size:12px}
 .zbox{position:absolute;border:calc(2px * var(--dv-iz,1)) dashed #fff;outline:calc(2px * var(--dv-iz,1)) dashed var(--dv-p);outline-offset:calc(-2px * var(--dv-iz,1));background:color-mix(in srgb,var(--dv-p) 22%,transparent);border-radius:var(--dv-r-md);pointer-events:none}
-.zbox span{position:absolute;top:calc(-28px * var(--dv-iz,1));left:0;transform:scale(var(--dv-iz,1));transform-origin:0 0;background:var(--dv-pbtn);color:#fff;font-size:12px;font-weight:500;border-radius:var(--dv-pill);padding:3px 10px;white-space:nowrap}
+.zbox.edit{pointer-events:auto;cursor:move}
+.zh{position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--dv-p);box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%) scale(var(--dv-iz,1));box-sizing:border-box}
+.zh::before{content:'';position:absolute;inset:-12px;border-radius:50%} /* bigger target for a finger */
+.zh-nw{left:0;top:0;cursor:nwse-resize}.zh-ne{left:100%;top:0;cursor:nesw-resize}
+.zh-sw{left:0;top:100%;cursor:nesw-resize}.zh-se{left:100%;top:100%;cursor:nwse-resize}
+.zbox span{position:absolute;top:calc(-28px * var(--dv-iz,1));left:calc(14px * var(--dv-iz,1));transform:scale(var(--dv-iz,1));transform-origin:0 0;background:var(--dv-pbtn);color:#fff;font-size:12px;font-weight:500;border-radius:var(--dv-pill);padding:3px 10px;white-space:nowrap}
 .spt{position:absolute;width:30px;height:30px;transform:translate(-50%,-50%) scale(var(--dv-iz,1));border-radius:50%;border:3px solid #fff;background:var(--dv-pbtn);box-shadow:0 0 0 6px color-mix(in srgb,var(--dv-p) 30%,transparent);pointer-events:none}
 /* popovers */
 .scrim{position:absolute;inset:0;border:0;padding:0;margin:0;background:rgba(0,0,0,.32);z-index:20;cursor:default;width:100%;height:100%}
@@ -1425,7 +1430,45 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const l = Math.min(p0.l, p1.l), t = Math.min(p0.t, p1.t);
       const w = Math.abs(p1.l - p0.l), h = Math.abs(p1.t - p0.t);
       const mw = Math.abs(z[2] - z[0]) / 1000, mh = Math.abs(z[3] - z[1]) / 1000;
-      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${this._dim(mw, mh)} · ${this._ui.passes}×</span></div>`;
+      // Drag inside to move the zone, or a corner handle to resize it.
+      const handles = ['nw', 'ne', 'sw', 'se'].map((c) => `<i class="zh zh-${c}" data-zone="${c}"></i>`).join('');
+      return `<div class="zbox edit" data-zone="move" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${this._dim(mw, mh)} · ${this._ui.passes}×</span>${handles}</div>`;
+    }
+
+    /** Starts moving or resizing the drawn zone from a pointer on its box or one of its handles. */
+    _startZoneEdit(ev, el, p) {
+      const z = this._ui.zone;
+      const mode = el.dataset.zone;
+      const edit = { mode, orig: [...z], start: p };
+      if (mode !== 'move') {
+        // The corner opposite the handle stays put. Find it on screen, so a flipped map still works.
+        const r = el.closest('.zbox').getBoundingClientRect();
+        const ax = mode.includes('w') ? r.right : r.left, ay = mode.includes('n') ? r.bottom : r.top;
+        const a = this._evtToVac({ clientX: ax, clientY: ay });
+        const h = this._evtToVac({ clientX: ax === r.left ? r.right : r.left, clientY: ay === r.top ? r.bottom : r.top });
+        if (!a || !h) return null;
+        // Snap the anchor to the zone's own corner and keep the direction the handle grows in.
+        edit.anchor = { x: Math.abs(a.x - z[0]) < Math.abs(a.x - z[2]) ? z[0] : z[2], y: Math.abs(a.y - z[1]) < Math.abs(a.y - z[3]) ? z[1] : z[3] };
+        edit.corner = { x: edit.anchor.x === z[0] ? z[2] : z[0], y: edit.anchor.y === z[1] ? z[3] : z[1] }; // the handle's corner
+        edit.dir = { x: Math.sign(h.x - a.x) || 1, y: Math.sign(h.y - a.y) || 1 };
+      }
+      return edit;
+    }
+
+    _zoneEditTo(edit, p) {
+      const MIN = 300; // same minimum as a drawn zone (mm)
+      if (edit.mode === 'move') {
+        const dx = p.x - edit.start.x, dy = p.y - edit.start.y;
+        const o = edit.orig;
+        return [o[0] + dx, o[1] + dy, o[2] + dx, o[3] + dy];
+      }
+      const a = edit.anchor, d = edit.dir;
+      // The corner follows the finger's movement (not its position, so grabbing a handle off-centre
+      // doesn't make it jump), and can't cross its anchor or shrink the zone below the minimum.
+      const cx = edit.corner.x + p.x - edit.start.x, cy = edit.corner.y + p.y - edit.start.y;
+      const x = d.x > 0 ? Math.max(cx, a.x + MIN) : Math.min(cx, a.x - MIN);
+      const y = d.y > 0 ? Math.max(cy, a.y + MIN) : Math.min(cy, a.y - MIN);
+      return [Math.min(a.x, x), Math.min(a.y, y), Math.max(a.x, x), Math.max(a.y, y)].map(Math.round);
     }
 
     _pop() {
@@ -1842,6 +1885,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const p = this._evtToVac(ev);
       if (!p) return;
       this._drag = { start: p, cur: p, id: ev.pointerId, moved: false };
+      const zh = this._ui.target === 'zone' && this._ui.zone && ev.target.closest('[data-zone]');
+      if (zh) this._drag.zone = this._startZoneEdit(ev, zh, p);
       // A mouse drag moves the zoomed map, except in Zone and Spot modes. A finger scrolls the page instead.
       const pan = ev.pointerType === 'mouse' && this._zoom.s > 1.001 && ['all', 'rooms'].includes(this._ui.target);
       if (pan) this._drag.pan = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY };
@@ -1851,12 +1896,18 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       }
     }
 
+    /** Drops the gesture in progress, putting back a zone that was being moved or resized. */
+    _cancelDrag() {
+      const d = this._drag;
+      if (!d) return;
+      this._drag = null;
+      if (d.zone) { this._ui.zone = d.zone.orig; this._schedule(); }
+      const live = this.shadowRoot.querySelector('[data-live]');
+      if (live) live.hidden = true;
+    }
+
     _startPinch() {
-      if (this._drag) {
-        this._drag = null; // the first finger was not a selection after all
-        const live = this.shadowRoot.querySelector('[data-live]');
-        if (live) live.hidden = true;
-      }
+      this._cancelDrag(); // the first finger was not a selection after all
       const [a, b] = [...this._pts.values()];
       this._pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, from: { ...this._zoom } };
     }
@@ -1888,6 +1939,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!p) return;
       d.cur = p;
       if (Math.abs(p.fx - d.start.fx) + Math.abs(p.fy - d.start.fy) > 0.01 / this._zoom.s) d.moved = true;
+      if (d.zone) {
+        if (d.moved) { this._ui.zone = this._zoneEditTo(d.zone, p); this._schedule(); }
+        return;
+      }
       if (this._ui.target === 'zone' && d.moved) {
         const box = this.shadowRoot.querySelector('[data-live]');
         if (box) {
@@ -1905,16 +1960,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (ev.type !== 'pointerleave' && this._pts.delete(ev.pointerId) && this._pinch && this._pts.size < 2) this._pinch = null;
       // The browser took the touch to scroll the page: that was not a tap on the map.
       if (ev.type === 'pointercancel' && this._drag?.id === ev.pointerId) {
-        this._drag = null;
-        const live = this.shadowRoot.querySelector('[data-live]');
-        if (live) live.hidden = true;
+        this._cancelDrag();
         return;
       }
       const d = this._drag;
       if (!d || (ev.pointerId !== undefined && ev.pointerId !== d.id) || ev.type === 'pointerleave') return;
       this._drag = null;
       const u = this._ui;
-      if (u.target === 'zone' && d.moved) {
+      if (d.zone) {
+        // Moved or resized in _onMove; a tap on the zone leaves it as it is.
+      } else if (u.target === 'zone' && d.moved) {
         const a = d.start, b = d.cur;
         u.zone = [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)];
         if (Math.abs(u.zone[2] - u.zone[0]) < 300 || Math.abs(u.zone[3] - u.zone[1]) < 300) u.zone = null;
