@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Map zoom.** Pinch with two fingers to zoom and move the map, on every layout. With a
+  mouse, the wheel zooms around the cursor and dragging moves the zoomed map. Room pills, the
+  spot and the zone outline keep their size while zoomed. The map goes back to the full view
+  when you switch pages or layouts.
+- **The page scrolls over the map again.** In All rooms and Rooms, a one-finger swipe on the
+  map scrolls the page instead of doing nothing, zoomed or not; a tap still picks a room. In Zone and Spot, one finger only draws the zone or places the spot, and
+  nothing scrolls.
+
 ## 0.3.1
 
 - **New screenshots** of the 0.3.0 layout, with more in a "More screenshots" section. Images
