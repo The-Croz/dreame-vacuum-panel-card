@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **Edit a drawn zone.** Like in the Dreame app, a zone has a handle at each corner: drag
+  inside it to move it, or drag a handle to resize it while the opposite corner stays put.
+  Dragging outside the zone still draws a new one. The zone keeps its 30 cm minimum, the size
+  label updates as you go, and a pinch started mid-edit puts the zone back.
+- **Map zoom.** Pinch with two fingers to zoom and move the map, on every layout. With a
+  mouse, the wheel zooms around the cursor and dragging moves the zoomed map. Room pills, the
+  spot and the zone outline keep their size while zoomed. The map goes back to the full view
+  when you switch pages or layouts.
+- **The page scrolls over the map again.** In All rooms and Rooms, a one-finger swipe on the
+  map scrolls the page instead of doing nothing, zoomed or not; a tap still picks a room. In Zone and Spot, one finger only draws the zone or places the spot, and
+  nothing scrolls.
+
 ## 0.3.1
 
 - **New screenshots** of the 0.3.0 layout, with more in a "More screenshots" section. Images

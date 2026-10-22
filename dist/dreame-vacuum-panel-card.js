@@ -233,8 +233,13 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 /* map */
 .mapbox{position:relative;overflow:hidden;background:var(--dv-mapbg);min-height:0}
 .map{position:absolute;inset:0}
-.fit{position:absolute;touch-action:none;visibility:hidden}
+/* One finger scrolls the page over the map, unless it draws a zone or places a spot (.lock). Two fingers move the map. */
+.map{touch-action:pan-x pan-y}
+.fit{position:absolute;touch-action:pan-x pan-y;visibility:hidden;transform-origin:0 0}
+.fit.lock{touch-action:none}
 .fit.ready{visibility:visible}
+.fit.zoomed .ov{cursor:grab}
+.fit.zoomed .ov.zone,.fit.zoomed .ov.spot{cursor:crosshair}
 .fit img{width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
 .ov{position:absolute;inset:0;cursor:pointer}
 .ov.zone,.ov.spot{cursor:crosshair}
@@ -246,11 +251,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .mpill select{border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;min-height:36px}
 .hint{font-size:13px;color:var(--dv-text);background:var(--dv-bg);border:1px solid var(--dv-div);border-radius:var(--dv-pill);padding:6px 12px;box-shadow:0 2px 8px rgba(0,0,0,.1);display:inline-flex;align-items:center;gap:8px}
 .hint button{border:0;background:none;color:var(--dv-pt);font-weight:500;cursor:pointer;padding:4px}
-.pill{position:absolute;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px 0 4px;border-radius:var(--dv-pill);background:var(--dv-pbtn);color:#fff;font-size:13px;font-weight:500;border:2px solid rgba(255,255,255,.85);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.pill{position:absolute;transform:translate(-50%,-50%) scale(var(--dv-iz,1));display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px 0 4px;border-radius:var(--dv-pill);background:var(--dv-pbtn);color:#fff;font-size:13px;font-weight:500;border:2px solid rgba(255,255,255,.85);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
 .pill b{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.28);display:grid;place-items:center;font-size:12px}
-.zbox{position:absolute;border:2px dashed #fff;outline:2px dashed var(--dv-p);outline-offset:-2px;background:color-mix(in srgb,var(--dv-p) 22%,transparent);border-radius:var(--dv-r-md);pointer-events:none}
-.zbox span{position:absolute;top:-28px;left:0;background:var(--dv-pbtn);color:#fff;font-size:12px;font-weight:500;border-radius:var(--dv-pill);padding:3px 10px;white-space:nowrap}
-.spt{position:absolute;width:30px;height:30px;transform:translate(-50%,-50%);border-radius:50%;border:3px solid #fff;background:var(--dv-pbtn);box-shadow:0 0 0 6px color-mix(in srgb,var(--dv-p) 30%,transparent);pointer-events:none}
+.zbox{position:absolute;border:calc(2px * var(--dv-iz,1)) dashed #fff;outline:calc(2px * var(--dv-iz,1)) dashed var(--dv-p);outline-offset:calc(-2px * var(--dv-iz,1));background:color-mix(in srgb,var(--dv-p) 22%,transparent);border-radius:var(--dv-r-md);pointer-events:none}
+.zbox.edit{pointer-events:auto;cursor:move}
+.zh{position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--dv-p);box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%) scale(var(--dv-iz,1));box-sizing:border-box}
+.zh::before{content:'';position:absolute;inset:-12px;border-radius:50%} /* bigger target for a finger */
+.zh-nw{left:0;top:0;cursor:nwse-resize}.zh-ne{left:100%;top:0;cursor:nesw-resize}
+.zh-sw{left:0;top:100%;cursor:nesw-resize}.zh-se{left:100%;top:100%;cursor:nwse-resize}
+.zbox span{position:absolute;top:calc(-28px * var(--dv-iz,1));left:calc(14px * var(--dv-iz,1));transform:scale(var(--dv-iz,1));transform-origin:0 0;background:var(--dv-pbtn);color:#fff;font-size:12px;font-weight:500;border-radius:var(--dv-pill);padding:3px 10px;white-space:nowrap}
+.spt{position:absolute;width:30px;height:30px;transform:translate(-50%,-50%) scale(var(--dv-iz,1));border-radius:50%;border:3px solid #fff;background:var(--dv-pbtn);box-shadow:0 0 0 6px color-mix(in srgb,var(--dv-p) 30%,transparent);pointer-events:none}
 /* popovers */
 .scrim{position:absolute;inset:0;border:0;padding:0;margin:0;background:rgba(0,0,0,.32);z-index:20;cursor:default;width:100%;height:100%}
 .popover{position:absolute;z-index:21;top:70px;right:14px;width:min(420px,calc(100% - 28px));max-height:calc(100% - 90px);overflow:auto;background:var(--dv-bg);border:1px solid var(--dv-div);border-radius:var(--dv-r-xl);box-shadow:0 12px 36px rgba(0,0,0,.25);padding:6px 0}
@@ -395,6 +405,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._regions = {};
       this._shellKey = null;
       this._nat = null;
+      this._zoom = { s: 1, x: 0, y: 0 }; // map zoom: scale and offset (px) of the fitted map
+      this._pts = new Map();             // pointers down on the map, for pinch zoom
       this._w = 0;
       this._snooze = this._loadSnooze();
       this._onClick = this._onClick.bind(this);
@@ -402,6 +414,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._onDown = this._onDown.bind(this);
       this._onMove = this._onMove.bind(this);
       this._onUp = this._onUp.bind(this);
+      this._onWheel = this._onWheel.bind(this);
+      this._onTouchMove = this._onTouchMove.bind(this);
     }
 
     /* ---------- Lovelace API ---------- */
@@ -494,6 +508,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       root.addEventListener('pointerup', this._onUp);
       root.addEventListener('pointercancel', this._onUp);
       root.addEventListener('pointerleave', this._onUp, true);
+      root.addEventListener('wheel', this._onWheel, { passive: false });
+      root.addEventListener('touchmove', this._onTouchMove, { passive: false });
       if (!this._ro) {
         this._ro = new ResizeObserver(() => {
           const w = this.clientWidth;
@@ -785,6 +801,67 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       fit.style.height = `${h}px`;
       fit.style.left = `${(box.clientWidth - w) / 2}px`;
       fit.style.top = `${padT + (H - h) / 2}px`;
+      // Keep the zoomed view on the same spot when the fitted size changes (resize, sheet height).
+      const z = this._zoom;
+      if (this._fitW && this._fitW !== w) { z.x *= w / this._fitW; z.y *= h / this._fitH; }
+      this._fitW = w; this._fitH = h;
+      this._applyZoom();
+    }
+
+    /* ---------- map zoom ---------- */
+    _applyZoom() {
+      const fit = this.shadowRoot.querySelector('[data-fit]');
+      if (!fit) return;
+      const z = this._zoom;
+      const on = z.s > 1.001;
+      fit.style.transform = on ? `translate(${z.x}px,${z.y}px) scale(${z.s})` : '';
+      fit.style.setProperty('--dv-iz', on ? String(1 / z.s) : '1'); // keeps pills and markers their usual size
+      fit.classList.toggle('zoomed', on);
+      this._lockMap();
+    }
+
+    /** Takes one-finger gestures from the browser when they draw on the map (zone, spot). */
+    _lockMap() {
+      const fit = this.shadowRoot.querySelector('[data-fit]');
+      if (fit) fit.classList.toggle('lock', this._ui.view === 'clean' && ['zone', 'spot'].includes(this._ui.target));
+    }
+
+    // A two-finger gesture on the map is a pinch: keep the browser from scrolling the page with it.
+    _onTouchMove(ev) {
+      if (ev.touches.length > 1 && ev.cancelable && ev.target.closest?.('[data-map]')) ev.preventDefault();
+    }
+
+    /** Zooms to scale s, keeping the screen point (cx, cy) over the same spot of the map. */
+    _zoomAt(s, cx, cy, from = this._zoom) {
+      const fit = this.shadowRoot.querySelector('[data-fit]');
+      const box = this.shadowRoot.querySelector('[data-map]');
+      if (!fit || !box || !this._nat) return;
+      const r = box.getBoundingClientRect();
+      const bx = r.left + fit.offsetLeft, by = r.top + fit.offsetTop; // fitted map's untransformed origin
+      const w = fit.offsetWidth, h = fit.offsetHeight;
+      s = clamp(s, 1, 8);
+      // Map point under (cx, cy) at the starting zoom, in untransformed pixels.
+      const mx = (cx - bx - from.x) / from.s, my = (cy - by - from.y) / from.s;
+      this._zoom = { s, x: clamp(cx - bx - mx * s, w * (1 - s), 0), y: clamp(cy - by - my * s, h * (1 - s), 0) };
+      this._applyZoom();
+    }
+
+    _panBy(dx, dy) {
+      const fit = this.shadowRoot.querySelector('[data-fit]');
+      if (!fit) return;
+      const z = this._zoom;
+      z.x = clamp(z.x + dx, fit.offsetWidth * (1 - z.s), 0);
+      z.y = clamp(z.y + dy, fit.offsetHeight * (1 - z.s), 0);
+      this._applyZoom();
+    }
+
+    _onWheel(ev) {
+      if (!ev.target.closest('[data-map]')) return; // a trackpad pinch arrives here too, as ctrl + wheel
+      // At full view, scrolling down is left to the page so a scrollable layout still scrolls.
+      if (this._zoom.s <= 1.001 && ev.deltaY > 0) return;
+      ev.preventDefault();
+      const step = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY; // lines to pixels
+      this._zoomAt(this._zoom.s * Math.exp(-step * 0.002), ev.clientX, ev.clientY);
     }
 
     /* ---------- render pipeline ---------- */
@@ -809,6 +886,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (key !== this._shellKey) {
         this._shellKey = key;
         this._regions = {};
+        this._zoom = { s: 1, x: 0, y: 0 }; // a new shell starts at full view
+        this._pts.clear();
+        this._pinch = null;
+        this._pan = null;
         const h = this._config.height || 'calc(100dvh - var(--header-height, 56px) - 16px)';
         const accent = (this._config.accent_color ? `--dvpc-accent:${esc(this._config.accent_color)};` : '')
           + (this._config.border_radius !== undefined && this._config.border_radius !== '' ? `--dv-r:${esc(/^\d+(\.\d+)?$/.test(String(this._config.border_radius)) ? `${this._config.border_radius}px` : this._config.border_radius)};` : '');
@@ -942,6 +1023,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       });
       const ov = root.querySelector('[data-r="overlay"]');
       if (ov) ov.className = `ov ${this._ui.view === 'clean' ? this._ui.target : ''}`;
+      this._lockMap();
     }
 
     /* ---------- shells ---------- */
@@ -1348,7 +1430,45 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const l = Math.min(p0.l, p1.l), t = Math.min(p0.t, p1.t);
       const w = Math.abs(p1.l - p0.l), h = Math.abs(p1.t - p0.t);
       const mw = Math.abs(z[2] - z[0]) / 1000, mh = Math.abs(z[3] - z[1]) / 1000;
-      return `<div class="zbox" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${this._dim(mw, mh)} · ${this._ui.passes}×</span></div>`;
+      // Drag inside to move the zone, or a corner handle to resize it.
+      const handles = ['nw', 'ne', 'sw', 'se'].map((c) => `<i class="zh zh-${c}" data-zone="${c}"></i>`).join('');
+      return `<div class="zbox edit" data-zone="move" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span>${this._dim(mw, mh)} · ${this._ui.passes}×</span>${handles}</div>`;
+    }
+
+    /** Starts moving or resizing the drawn zone from a pointer on its box or one of its handles. */
+    _startZoneEdit(ev, el, p) {
+      const z = this._ui.zone;
+      const mode = el.dataset.zone;
+      const edit = { mode, orig: [...z], start: p };
+      if (mode !== 'move') {
+        // The corner opposite the handle stays put. Find it on screen, so a flipped map still works.
+        const r = el.closest('.zbox').getBoundingClientRect();
+        const ax = mode.includes('w') ? r.right : r.left, ay = mode.includes('n') ? r.bottom : r.top;
+        const a = this._evtToVac({ clientX: ax, clientY: ay });
+        const h = this._evtToVac({ clientX: ax === r.left ? r.right : r.left, clientY: ay === r.top ? r.bottom : r.top });
+        if (!a || !h) return null;
+        // Snap the anchor to the zone's own corner and keep the direction the handle grows in.
+        edit.anchor = { x: Math.abs(a.x - z[0]) < Math.abs(a.x - z[2]) ? z[0] : z[2], y: Math.abs(a.y - z[1]) < Math.abs(a.y - z[3]) ? z[1] : z[3] };
+        edit.corner = { x: edit.anchor.x === z[0] ? z[2] : z[0], y: edit.anchor.y === z[1] ? z[3] : z[1] }; // the handle's corner
+        edit.dir = { x: Math.sign(h.x - a.x) || 1, y: Math.sign(h.y - a.y) || 1 };
+      }
+      return edit;
+    }
+
+    _zoneEditTo(edit, p) {
+      const MIN = 300; // same minimum as a drawn zone (mm)
+      if (edit.mode === 'move') {
+        const dx = p.x - edit.start.x, dy = p.y - edit.start.y;
+        const o = edit.orig;
+        return [o[0] + dx, o[1] + dy, o[2] + dx, o[3] + dy];
+      }
+      const a = edit.anchor, d = edit.dir;
+      // The corner follows the finger's movement (not its position, so grabbing a handle off-centre
+      // doesn't make it jump), and can't cross its anchor or shrink the zone below the minimum.
+      const cx = edit.corner.x + p.x - edit.start.x, cy = edit.corner.y + p.y - edit.start.y;
+      const x = d.x > 0 ? Math.max(cx, a.x + MIN) : Math.min(cx, a.x - MIN);
+      const y = d.y > 0 ? Math.max(cy, a.y + MIN) : Math.min(cy, a.y - MIN);
+      return [Math.min(a.x, x), Math.min(a.y, y), Math.max(a.x, x), Math.max(a.y, y)].map(Math.round);
     }
 
     _pop() {
@@ -1754,24 +1874,75 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         this._startHold(hold);
         return;
       }
+      // Two fingers on the map zoom and move it; one finger keeps selecting rooms, spots and zones.
+      if (ev.pointerType !== 'mouse' && ev.target.closest('[data-map]') && !ev.target.closest('.map-top > *, .map-bottom > *')) {
+        this._pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+        if (this._pts.size === 2) { this._startPinch(); return; }
+        if (this._pinch) return;
+      }
       const ov = ev.target.closest('[data-r="overlay"]');
       if (!ov || ev.target.closest('[data-a]') || this._ui.view !== 'clean') return;
       const p = this._evtToVac(ev);
       if (!p) return;
       this._drag = { start: p, cur: p, id: ev.pointerId, moved: false };
-      if (this._ui.target === 'zone') {
+      const zh = this._ui.target === 'zone' && this._ui.zone && ev.target.closest('[data-zone]');
+      if (zh) this._drag.zone = this._startZoneEdit(ev, zh, p);
+      // A mouse drag moves the zoomed map, except in Zone and Spot modes. A finger scrolls the page instead.
+      const pan = ev.pointerType === 'mouse' && this._zoom.s > 1.001 && ['all', 'rooms'].includes(this._ui.target);
+      if (pan) this._drag.pan = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY };
+      if (this._ui.target === 'zone' || pan) {
         try { ov.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
         ev.preventDefault();
       }
     }
 
+    /** Drops the gesture in progress, putting back a zone that was being moved or resized. */
+    _cancelDrag() {
+      const d = this._drag;
+      if (!d) return;
+      this._drag = null;
+      if (d.zone) { this._ui.zone = d.zone.orig; this._schedule(); }
+      const live = this.shadowRoot.querySelector('[data-live]');
+      if (live) live.hidden = true;
+    }
+
+    _startPinch() {
+      this._cancelDrag(); // the first finger was not a selection after all
+      const [a, b] = [...this._pts.values()];
+      this._pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, from: { ...this._zoom } };
+    }
+
     _onMove(ev) {
+      if (this._pts.has(ev.pointerId)) {
+        this._pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+        const pi = this._pinch;
+        if (pi) {
+          if (this._pts.size !== 2) return;
+          const [a, b] = [...this._pts.values()];
+          const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+          // Zoom around where the fingers started, then follow them as they move.
+          this._zoomAt(pi.from.s * Math.hypot(a.x - b.x, a.y - b.y) / pi.d, pi.cx, pi.cy, pi.from);
+          this._panBy(cx - pi.cx, cy - pi.cy);
+          return;
+        }
+      }
       const d = this._drag;
       if (!d || ev.pointerId !== d.id) return;
+      if (d.pan) {
+        // The map moves with the cursor, so measure the drag on screen, not on the map.
+        this._panBy(ev.clientX - d.pan.x, ev.clientY - d.pan.y);
+        d.pan.x = ev.clientX; d.pan.y = ev.clientY;
+        if (Math.abs(ev.clientX - d.pan.sx) + Math.abs(ev.clientY - d.pan.sy) > 4) d.moved = true;
+        return;
+      }
       const p = this._evtToVac(ev);
       if (!p) return;
       d.cur = p;
-      if (Math.abs(p.fx - d.start.fx) + Math.abs(p.fy - d.start.fy) > 0.01) d.moved = true;
+      if (Math.abs(p.fx - d.start.fx) + Math.abs(p.fy - d.start.fy) > 0.01 / this._zoom.s) d.moved = true;
+      if (d.zone) {
+        if (d.moved) { this._ui.zone = this._zoneEditTo(d.zone, p); this._schedule(); }
+        return;
+      }
       if (this._ui.target === 'zone' && d.moved) {
         const box = this.shadowRoot.querySelector('[data-live]');
         if (box) {
@@ -1786,11 +1957,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _onUp(ev) {
       if (this._hold && (ev.type !== 'pointerleave' || ev.target.closest?.('[data-hold]'))) this._stopHold();
+      if (ev.type !== 'pointerleave' && this._pts.delete(ev.pointerId) && this._pinch && this._pts.size < 2) this._pinch = null;
+      // The browser took the touch to scroll the page: that was not a tap on the map.
+      if (ev.type === 'pointercancel' && this._drag?.id === ev.pointerId) {
+        this._cancelDrag();
+        return;
+      }
       const d = this._drag;
       if (!d || (ev.pointerId !== undefined && ev.pointerId !== d.id) || ev.type === 'pointerleave') return;
       this._drag = null;
       const u = this._ui;
-      if (u.target === 'zone' && d.moved) {
+      if (d.zone) {
+        // Moved or resized in _onMove; a tap on the zone leaves it as it is.
+      } else if (u.target === 'zone' && d.moved) {
         const a = d.start, b = d.cur;
         u.zone = [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)];
         if (Math.abs(u.zone[2] - u.zone[0]) < 300 || Math.abs(u.zone[3] - u.zone[1]) < 300) u.zone = null;
