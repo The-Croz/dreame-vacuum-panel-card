@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Map zoom.** Pinch with two fingers to zoom and move the map, on every layout. With a
+  mouse, the wheel zooms around the cursor and dragging moves the zoomed map. Room pills, the
+  spot and the zone outline keep their size while zoomed. The map goes back to the full view
+  when you switch pages or layouts.
+- **The page scrolls over the map again.** In All rooms and Rooms, a one-finger swipe on the
+  map scrolls the page instead of doing nothing, zoomed or not; a tap still picks a room. In Zone and Spot, one finger only draws the zone or places the spot, and
+  nothing scrolls.
 - **French translation.** The card's own labels (menus, buttons, hints, care alerts, the
   settings menu, part names and the visual editor) are now available in French. The card
   follows your Home Assistant profile language and falls back to English; the new `language`
