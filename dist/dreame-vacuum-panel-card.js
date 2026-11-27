@@ -4,7 +4,7 @@
  * Desktop, tablet and phone layouts in one card. MIT License.
  */
 (() => {
-  const VERSION = '0.3.1';
+  const VERSION = '0.4.0';
   const TAG = 'dreame-vacuum-panel-card';
 
   /* ------------------------------------------------------------------ */
@@ -372,7 +372,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 .hint button{border:0;background:none;color:var(--dv-pt);font-weight:500;cursor:pointer;padding:4px}
 .pill{position:absolute;transform:translate(-50%,-50%) scale(var(--dv-iz,1));display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px 0 4px;border-radius:var(--dv-pill);background:var(--dv-pbtn);color:#fff;font-size:13px;font-weight:500;border:2px solid rgba(255,255,255,.85);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
 .pill b{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.28);display:grid;place-items:center;font-size:12px}
-.zbox{position:absolute;border:calc(2px * var(--dv-iz,1)) dashed #fff;outline:calc(2px * var(--dv-iz,1)) dashed var(--dv-p);outline-offset:calc(-2px * var(--dv-iz,1));background:color-mix(in srgb,var(--dv-p) 22%,transparent);border-radius:var(--dv-r-md);pointer-events:none}
+.zbox{position:absolute;border:calc(2px * var(--dv-iz,1)) dashed #fff;outline:calc(2px * var(--dv-iz,1)) dashed var(--dv-p);outline-offset:calc(-2px * var(--dv-iz,1));background:color-mix(in srgb,var(--dv-p) 22%,transparent);border-radius:calc(var(--dv-r-md) * var(--dv-iz,1));pointer-events:none}
 .zbox.edit{pointer-events:auto;cursor:move}
 .zh{position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--dv-p);box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%) scale(var(--dv-iz,1));box-sizing:border-box}
 .zh::before{content:'';position:absolute;inset:-12px;border-radius:50%} /* bigger target for a finger */
@@ -987,7 +987,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     }
 
     _onWheel(ev) {
-      if (!ev.target.closest('[data-map]')) return; // a trackpad pinch arrives here too, as ctrl + wheel
+      // A trackpad pinch arrives here too, as ctrl + wheel. The controls on top of the map are left alone.
+      if (!ev.target.closest('[data-map]') || ev.target.closest('.map-top > *, .map-bottom > *')) return;
       // At full view, scrolling down is left to the page so a scrollable layout still scrolls.
       if (this._zoom.s <= 1.001 && ev.deltaY > 0) return;
       ev.preventDefault();

@@ -1,18 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
-- **Edit a drawn zone.** Like in the Dreame app, a zone has a handle at each corner: drag
-  inside it to move it, or drag a handle to resize it while the opposite corner stays put.
-  Dragging outside the zone still draws a new one. The zone keeps its 30 cm minimum, the size
-  label updates as you go, and a pinch started mid-edit puts the zone back.
 - **Map zoom.** Pinch with two fingers to zoom and move the map, on every layout. With a
   mouse, the wheel zooms around the cursor and dragging moves the zoomed map. Room pills, the
   spot and the zone outline keep their size while zoomed. The map goes back to the full view
   when you switch pages or layouts.
+- **Edit a drawn zone.** Like in the Dreame app, a zone has a handle at each corner: drag
+  inside it to move it, or drag a handle to resize it while the opposite corner stays put.
+  Dragging outside the zone still draws a new one. The zone keeps its 30 cm minimum, the size
+  label updates as you go, and a pinch started mid-edit puts the zone back.
+- **Floor picker on phones.** The phone layout now shows the floor dropdown above the map when
+  the robot has more than one map. With a single map it shows the map's name, as on desktop.
 - **The page scrolls over the map again.** In All rooms and Rooms, a one-finger swipe on the
-  map scrolls the page instead of doing nothing, zoomed or not; a tap still picks a room. In Zone and Spot, one finger only draws the zone or places the spot, and
-  nothing scrolls.
+  map scrolls the page instead of doing nothing, zoomed or not; a tap still picks a room. In
+  Zone and Spot, one finger only draws the zone or places the spot, and nothing scrolls.
 - **French translation.** The card's own labels (menus, buttons, hints, care alerts, the
   settings menu, part names and the visual editor) are now available in French. The card
   follows your Home Assistant profile language and falls back to English; the new `language`
