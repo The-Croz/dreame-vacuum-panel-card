@@ -54,15 +54,21 @@
     squeegee: ['Squeegee', 'mdi:wiper'],
     tank_filter: ['Tank filter', 'mdi:air-filter'],
     deodorizer: ['Deodorizer', 'mdi:scent'],
-    wheel: ['Wheel', 'mdi:tire'],
+    wheel_dirty: ['Wheel', 'mdi:tire'],
     scale_inhibitor: ['Scale inhibitor', 'mdi:water-check-outline'],
     dirty_water_tank: ['Dirty water tank', 'mdi:cup-water'],
     onboard_dirty_water_tank: ['Onboard dirty tank', 'mdi:cup-water'],
-    fluffing_roller: ['Fluffing roller', 'mdi:rotate-3d-variant'],
-    roller_mop_filter: ['Roller mop filter', 'mdi:air-filter'],
-    water_outlet_filter: ['Water outlet filter', 'mdi:air-filter'],
+    fluffing_roller_dirty: ['Fluffing roller', 'mdi:rotate-3d-variant'],
+    roller_mop_filter_dirty: ['Roller mop filter', 'mdi:air-filter'],
+    water_outlet_filter_dirty: ['Water outlet filter', 'mdi:air-filter'],
+    dirty_water_channel: ['Dirty water channel', 'mdi:pipe'],
   };
-  const RESET_NAME = { sensor_dirty: 'sensor' };
+  // Parts whose counter is named without the "_dirty" suffix (reset_sensor, reset_wheel, ...).
+  const RESET_NAME = { sensor_dirty: 'sensor', wheel_dirty: 'wheel', fluffing_roller_dirty: 'fluffing_roller', roller_mop_filter_dirty: 'roller_mop_filter', water_outlet_filter_dirty: 'water_outlet_filter' };
+  // Per-room setting keys, labelled from the key itself (see _roomSettings).
+  const ROOM_KEYS = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleaning_times', 'order', 'floor_material', 'floor_material_direction', 'name', 'visibility'];
+  // Settings whose entity name repeats its section title ("DND start" under Do not disturb).
+  const LABELS = { dnd: 'Do not disturb', dnd_start: 'Start time', dnd_end: 'End time', off_peak_charging_start: 'Start time', off_peak_charging_end: 'End time' };
 
   // Keys used by the cleaning controls (kept out of the generic settings lists)
   const CLEAN_KEYS = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleangenius', 'customized_cleaning', 'selected_map'];
@@ -116,6 +122,119 @@
   // Buttons the card already offers elsewhere (dock tiles, care resets, warnings).
   const HIDDEN_BTN = /^button\.(reset_|start_auto_empty$|self_clean$|manual_drying$|clear_warning$|start_washing$|pause_washing$|start_drying$|stop_drying$)/;
   const DESTRUCTIVE = ['start_mapping', 'start_fast_mapping', 'base_station_self_repair', 'water_tank_draining', 'backup_saved_map', 'start_recleaning'];
+
+  /* ------------------------------------------------------------------ */
+  /* Translations                                                        */
+  /* ------------------------------------------------------------------ */
+  // Keyed by the English text, which is also the fallback. A "context|" prefix marks keys whose
+  // English text is shared but the translation differs (usually a shorter form for tight buttons).
+  // Entity states and options come from Home Assistant's own translations (see _fmt).
+  const I18N = {
+    fr: {
+      // Card editor
+      'Vacuum': 'Aspirateur', 'Map camera (optional)': 'Caméra de la carte (facultatif)', 'Title (optional)': 'Titre (facultatif)', 'Layout': 'Disposition',
+      'Height (CSS, optional)': 'Hauteur (CSS, facultatif)', 'Accent color (CSS, optional)': 'Couleur d’accent (CSS, facultatif)', 'Corner radius (px, default 12)': 'Arrondi des coins (px, 12 par défaut)',
+      'Default cleaning target': 'Cible de nettoyage par défaut', 'Show back button': 'Afficher le bouton retour', 'Show HA menu button': 'Afficher le bouton du menu HA',
+      'Fill the screen in panel views': 'Remplir l’écran dans les vues panneau',
+      'Show Water Tank Draining (needs drain & refill kit)': 'Afficher la vidange du réservoir (kit de vidange et remplissage requis)',
+      'Show Auto Water Refilling (needs drain & refill kit)': 'Afficher le remplissage automatique (kit de vidange et remplissage requis)',
+      'Care warning at (%)': 'Alerte d’entretien à (%)', 'Care critical at (%)': 'Entretien critique à (%)', 'Language': 'Langue',
+      'Auto (by card width)': 'Auto (selon la largeur)', 'Desktop': 'Ordinateur', 'Tablet': 'Tablette', 'Phone': 'Téléphone',
+      'Auto (Home Assistant language)': 'Auto (langue de Home Assistant)',
+      'Set "entity" to your Dreame vacuum, e.g. entity: vacuum.my_robot': 'Indiquez votre aspirateur Dreame dans « entity », par ex. entity: vacuum.mon_robot',
+      // Compact option labels (SHORT)
+      'short|Vacuum': 'Aspiration', 'short|Mop': 'Lavage', 'short|Vac + Mop': 'Asp. + lav.', 'short|Mop after': 'Lav. après', 'short|Routine': 'Routine',
+      'short|Deep': 'Intensif', 'short|Deep mode': 'Mode intensif', 'short|All modes': 'Tous modes', 'short|Water saving': 'Éco eau', 'short|High': 'Élevée', 'short|Low': 'Basse',
+      'Quiet': 'Silencieux', 'Slightly dry': 'Légèrement sec', 'Moist': 'Humide', 'Wet': 'Mouillé', 'Dry': 'Sec',
+      // Parts (CONS)
+      'Main brush': 'Brosse principale', 'Side brush': 'Brosse latérale', 'Filter': 'Filtre', 'Sensors': 'Capteurs', 'Mop pads': 'Serpillières',
+      'Silver-ion module': 'Module à ions d’argent', 'Detergent': 'Détergent', 'Squeegee': 'Raclette', 'Tank filter': 'Filtre du réservoir', 'Deodorizer': 'Désodorisant',
+      'Wheel': 'Roue', 'Scale inhibitor': 'Anticalcaire', 'Dirty water tank': 'Réservoir d’eau sale', 'Onboard dirty tank': 'Réservoir d’eau sale embarqué',
+      'Fluffing roller': 'Rouleau démêleur', 'Roller mop filter': 'Filtre du rouleau de lavage', 'Water outlet filter': 'Filtre de sortie d’eau', 'Dirty water channel': 'Canal d’eau sale',
+      // Settings menu (SETTINGS, MAINT)
+      'Cleaning': 'Nettoyage', 'Recleaning, sequence, edges and gaps': 'Repassage, ordre, bords et interstices', 'Behavior': 'Comportement', 'Edges & gaps': 'Bords et interstices',
+      'Mopping': 'Lavage', 'Mop pads, lifting and where to mop': 'Serpillières, levage et zones à laver', 'Where to mop': 'Où laver',
+      'Carpet': 'Tapis', 'Boost, recognition and carpet handling': 'Boost, détection et gestion des tapis',
+      'Dock': 'Station', 'Mop washing, drying and emptying': 'Lavage des serpillières, séchage et vidage', 'Mop washing': 'Lavage des serpillières', 'Drying': 'Séchage', 'Emptying & water': 'Vidage et eau',
+      'Obstacle avoidance': 'Évitement d’obstacles', 'Detection, pets and camera': 'Détection, animaux et caméra', 'Detection': 'Détection', 'Pets': 'Animaux', 'Camera & photos': 'Caméra et photos',
+      'Rooms': 'Pièces', 'Per-room suction, water, route and order': 'Aspiration, eau, trajet et ordre par pièce',
+      'Maps': 'Cartes', 'Floors, saving and rotation': 'Étages, sauvegarde et rotation',
+      'Schedule': 'Planification', 'Do not disturb and off-peak charging': 'Ne pas déranger et charge en heures creuses', 'Do not disturb': 'Ne pas déranger', 'Off-peak charging': 'Charge en heures creuses',
+      'Voice & sound': 'Voix et son', 'Volume, voice prompts and language': 'Volume, messages vocaux et langue',
+      'System': 'Système', 'Child lock and other settings': 'Sécurité enfant et autres réglages', 'Safety': 'Sécurité',
+      'Maintenance': 'Maintenance', 'Mapping, dock tools and backups': 'Cartographie, outils de la station et sauvegardes', 'Mapping': 'Cartographie', 'More': 'Plus',
+      // Per-room settings (ROOM_KEYS)
+      'Cleaning mode': 'Mode de nettoyage', 'Suction level': 'Puissance d’aspiration', 'Wetness level': 'Niveau d’humidité', 'Mop pad humidity': 'Humidité des serpillières',
+      'Water volume': 'Débit d’eau', 'Cleaning route': 'Trajet de nettoyage', 'Cleaning times': 'Nombre de passages', 'Order': 'Ordre',
+      'Floor material': 'Type de sol', 'Floor material direction': 'Sens du sol', 'Name': 'Nom', 'Visibility': 'Visibilité',
+      'Start time': 'Heure de début', 'End time': 'Heure de fin',
+      // Navigation and shells
+      'Clean': 'Nettoyage', 'Dock & care': 'Station et entretien', 'Settings': 'Réglages', 'History': 'Historique', 'Remote': 'Pilotage',
+      'Map': 'Carte', 'Vacuum map': 'Carte de l’aspirateur', 'Vacuum sections': 'Sections de l’aspirateur', 'Controls': 'Commandes',
+      'No map yet. Check the map camera entity (camera.*_map).': 'Pas encore de carte. Vérifiez l’entité caméra de la carte (camera.*_map).',
+      'Entity {id} not found.': 'Entité {id} introuvable.', 'Back': 'Retour', 'Open Home Assistant menu': 'Ouvrir le menu de Home Assistant', 'Close menu': 'Fermer le menu',
+      // Status and cleaning
+      'Room {id}': 'Pièce {id}', 'Mop wash paused': 'Lavage des serpillières en pause', 'Washing mops': 'Lavage des serpillières',
+      'battery': 'batterie', 'cleaned': 'nettoyés', 'last run': 'dernier passage',
+      'Locate robot': 'Localiser le robot', 'Locate': 'Localiser', 'Send to dock': 'Renvoyer à la station', 'Stop': 'Arrêter',
+      'Pause': 'Pause', 'Resume': 'Reprendre', 'Clean all': 'Tout nettoyer', 'Clean {n} room': 'Nettoyer {n} pièce', 'Clean {n} rooms': 'Nettoyer {n} pièces', 'Pick rooms': 'Choisir des pièces',
+      'Clean zone': 'Nettoyer la zone', 'Draw a zone': 'Tracer une zone', 'Spot clean': 'Nettoyer le point', 'Tap the map': 'Touchez la carte',
+      'Per-room settings': 'Réglages par pièce', 'Use each room’s saved preferences': 'Utilise les préférences enregistrées de chaque pièce',
+      'Mode': 'Mode', 'Suction': 'Aspiration', 'Mop humidity': 'Humidité des serpillières', 'Route': 'Trajet', 'Passes': 'Passages', 'Wetness': 'Humidité',
+      'CleanGenius is choosing suction, water and route.': 'CleanGenius choisit l’aspiration, l’eau et le trajet.',
+      'Per-room settings are on, so each room uses its own settings.': 'Les réglages par pièce sont activés : chaque pièce utilise ses propres réglages.',
+      '{n} of {total} rooms': '{n} pièce(s) sur {total}', '1 zone': '1 zone', 'No zone yet': 'Aucune zone', '1 spot': '1 point', 'No spot yet': 'Aucun point', 'Whole map': 'Toute la carte',
+      'target|All rooms': 'Toutes', 'All rooms': 'Toutes les pièces', 'Zone': 'Zone', 'Spot': 'Point', 'What to clean': 'Quoi nettoyer',
+      'No rooms found on this map.': 'Aucune pièce trouvée sur cette carte.', 'Clear': 'Effacer', 'Cleans every room on this map': 'Nettoie toutes les pièces de cette carte',
+      'Drag on the map to draw a zone': 'Faites glisser sur la carte pour tracer une zone', 'Zone {size}': 'Zone {size}',
+      'Spot placed · tap elsewhere to move it': 'Point placé · touchez ailleurs pour le déplacer', 'Tap the map to place a spot': 'Touchez la carte pour placer un point',
+      'Floor': 'Étage', 'Deselect {name}': 'Désélectionner {name}', 'Done': 'Terminé', 'Adjust': 'Ajuster',
+      // Dock
+      'Drying mops': 'Séchage des serpillières', '{n} min left': 'encore {n} min', 'Ready · robot docked': 'Prête · robot sur la station', 'Ready': 'Prête', 'Busy': 'Occupée',
+      'Clean water': 'Eau propre', 'Dirty water': 'Eau sale', 'Dust bag': 'Sac à poussière',
+      'Emptying…': 'Vidage…', 'Empty bin': 'Vider le bac', 'Resume wash': 'Reprendre le lavage', 'Pause wash': 'Suspendre le lavage', 'Wash mops': 'Laver les serpillières',
+      'Stop drying': 'Arrêter le séchage', 'Dry mops': 'Sécher les serpillières', 'Stop wash': 'Arrêter le lavage', 'Send robot to dock': 'Renvoyer le robot à la station',
+      // Care alerts
+      'Care': 'Entretien', 'Care alerts': 'Alertes d’entretien', ', {n} new': ', {n} nouvelle(s)', 'Close care alerts': 'Fermer les alertes d’entretien',
+      'Reported by the robot.': 'Signalé par le robot.', 'Clear warning': 'Effacer l’alerte',
+      ', about {n} {unit} left': ', il reste environ {n} {unit}', '{name} at {pct}%': '{name} à {pct} %',
+      'Refill the detergent cartridge soon{left}.': 'Remplissez bientôt la cartouche de détergent{left}.', 'Time to clean or replace{left}.': 'À nettoyer ou à remplacer{left}.',
+      'I refilled it': 'C’est rempli', 'Mark as done': 'Marquer comme fait',
+      'Check the clean water tank.': 'Vérifiez le réservoir d’eau propre.', 'Check the dock.': 'Vérifiez la station.',
+      'Clean water tank': 'Réservoir d’eau propre', 'Detergent cartridge': 'Cartouche de détergent', '{label}: {value}': '{label} : {value}',
+      '+{n} more care alert': '+{n} autre alerte d’entretien', '+{n} more care alerts': '+{n} autres alertes d’entretien', '+{n} more': '+{n} autre(s)',
+      'All parts': 'Tous les consommables', 'All parts are in good shape.': 'Tous les consommables sont en bon état.', 'Remind me tomorrow': 'Me le rappeler demain',
+      '{n} snoozed until tomorrow': '{n} reportée(s) à demain', 'Show': 'Afficher', 'View': 'Voir',
+      // Dock & care page
+      'Parts': 'Consommables', '{n} {unit} left': 'encore {n} {unit}', 'Reset': 'Réinit.', 'Reset {name}': 'Réinitialiser {name}',
+      'No consumable data reported.': 'Aucune donnée de consommable.', 'Lifetime': 'Au total',
+      'Cleaning time': 'Temps de nettoyage', 'Cleanings': 'Nettoyages', 'Total area': 'Surface totale', 'First cleaning': 'Premier nettoyage',
+      'Dock settings': 'Réglages de la station', 'Dock tools': 'Outils de la station', 'Dock, parts and lifetime totals': 'Station, consommables et totaux',
+      // Settings page
+      'No settings found for this robot.': 'Aucun réglage trouvé pour ce robot.', 'Settings categories': 'Catégories de réglages',
+      '{name} · changes apply right away': '{name} · les changements s’appliquent immédiatement', 'Room': 'Pièce',
+      'No per-room settings for this room.': 'Aucun réglage pour cette pièce.', 'Run': 'Lancer', 'Run "{name}" now?': 'Lancer « {name} » maintenant ?',
+      // History
+      'No cleaning history reported yet.': 'Aucun historique de nettoyage pour l’instant.', '{n} recent run': '{n} nettoyage récent', '{n} recent runs': '{n} nettoyages récents',
+      'Map of the {title} run': 'Carte du nettoyage {title}', 'Obstacle photos': 'Photos d’obstacles',
+      // Remote
+      'Remote control': 'Télécommande', 'Press and hold to drive. Obstacle sensors stay on.': 'Maintenez appuyé pour piloter. Les capteurs d’obstacles restent actifs.',
+      'Direction pad': 'Croix directionnelle', 'Forward': 'Avancer', 'Backward': 'Reculer', 'Turn left': 'Tourner à gauche', 'Turn right': 'Tourner à droite',
+      'Speed': 'Vitesse', 'Slow': 'Lente', 'Normal': 'Normale', 'Fast': 'Rapide',
+      // Errors
+      '{service} failed: {error}': 'Échec de {service} : {error}',
+    },
+  };
+  const haHass = () => document.querySelector('home-assistant')?.hass;
+  /** Card language: the `language` option, else Home Assistant's profile language, as a base code ("fr-CA" -> "fr"). */
+  const langOf = (hass, config) => {
+    const l = config?.language && config.language !== 'auto' ? config.language : hass?.locale?.language || hass?.language || navigator.language || 'en';
+    return String(l).toLowerCase().split(/[-_]/)[0];
+  };
+  const tr = (lang, key, vars) => {
+    const s = I18N[lang]?.[key] ?? key.slice(key.indexOf('|') + 1);
+    return vars ? s.replace(/\{(\w+)\}/g, (m, k) => String(vars[k] ?? m)) : s;
+  };
 
   /* ------------------------------------------------------------------ */
   /* Styles                                                              */
@@ -413,12 +532,13 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     }
 
     static getConfigForm() {
+      const t = (s) => tr(langOf(haHass()), s);
       const labels = {
         entity: 'Vacuum', map_entity: 'Map camera (optional)', title: 'Title (optional)', layout: 'Layout',
         height: 'Height (CSS, optional)', accent_color: 'Accent color (CSS, optional)', border_radius: 'Corner radius (px, default 12)', default_target: 'Default cleaning target',
         show_back: 'Show back button', show_menu: 'Show HA menu button', fullscreen: 'Fill the screen in panel views',
         show_water_tank_draining: 'Show Water Tank Draining (needs drain & refill kit)', show_auto_water_refilling: 'Show Auto Water Refilling (needs drain & refill kit)',
-        care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)',
+        care_warning: 'Care warning at (%)', care_critical: 'Care critical at (%)', language: 'Language',
       };
       return {
         schema: [
@@ -428,8 +548,10 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           {
             type: 'grid', name: '', schema: [
               { name: 'layout', selector: { select: { mode: 'dropdown', options: [
-                { value: 'auto', label: 'Auto (by card width)' }, { value: 'desktop', label: 'Desktop' }, { value: 'tablet', label: 'Tablet' }, { value: 'phone', label: 'Phone' }] } } },
-              { name: 'default_target', selector: { select: { mode: 'dropdown', options: [{ value: 'all', label: 'All rooms' }, { value: 'rooms', label: 'Rooms' }] } } },
+                { value: 'auto', label: t('Auto (by card width)') }, { value: 'desktop', label: t('Desktop') }, { value: 'tablet', label: t('Tablet') }, { value: 'phone', label: t('Phone') }] } } },
+              { name: 'default_target', selector: { select: { mode: 'dropdown', options: [{ value: 'all', label: t('All rooms') }, { value: 'rooms', label: t('Rooms') }] } } },
+              { name: 'language', selector: { select: { mode: 'dropdown', options: [
+                { value: 'auto', label: t('Auto (Home Assistant language)') }, { value: 'en', label: 'English' }, { value: 'fr', label: 'Français' }] } } },
               { name: 'height', selector: { text: {} } },
               { name: 'accent_color', selector: { text: {} } },
               { name: 'border_radius', selector: { number: { min: 0, max: 32, mode: 'box' } } },
@@ -443,15 +565,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
             ],
           },
         ],
-        computeLabel: (s) => labels[s.name] || s.name,
+        computeLabel: (s) => (labels[s.name] ? t(labels[s.name]) : s.name),
       };
     }
 
     setConfig(config) {
       if (!config || !config.entity || !String(config.entity).startsWith('vacuum.')) {
-        throw new Error('Set "entity" to your Dreame vacuum, e.g. entity: vacuum.my_robot');
+        throw new Error(tr(langOf(this._hass || haHass(), config), 'Set "entity" to your Dreame vacuum, e.g. entity: vacuum.my_robot'));
       }
       this._config = { layout: 'auto', fullscreen: true, show_water_tank_draining: false, show_auto_water_refilling: false, care_warning: 20, care_critical: 10, default_target: 'all', ...config };
+      this._lang = langOf(this._hass || haHass(), this._config);
       this._ui.target = this._ui.target || this._config.default_target;
       this._map = null;
       this._sig = null;
@@ -464,8 +587,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       this._hass = hass;
       if (!this._config) return;
       if (!this._map || hass.entities !== this._regRef) this._discover();
+      const lang = langOf(hass, this._config);
+      const relang = lang !== this._lang;
+      this._lang = lang;
       const sig = this._signature();
-      if (first || sig !== this._sig) {
+      if (first || relang || sig !== this._sig) {
+        if (relang) this._shellKey = null; // the shell holds text too
         this._sig = sig;
         this._schedule();
       }
@@ -561,6 +688,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       return out;
     }
 
+    /** UI text in the card's language. */
+    _t(key, vars) { return tr(this._lang, key, vars); }
+
     /* ---------- state accessors ---------- */
     _id(domain, key) { return this._map?.[`${domain}.${key}`]; }
     _st(domain, key) { const id = this._id(domain, key); return id ? this._hass.states[id] : undefined; }
@@ -598,7 +728,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (cam && typeof cam === 'object' && Object.keys(cam).length) {
         return Object.values(cam)
           .filter((r) => r.visibility !== 'Hidden')
-          .map((r) => ({ id: Number(r.room_id ?? r.id), name: r.custom_name || r.name || `Room ${r.room_id}`, x: r.x, y: r.y, x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1 }));
+          .map((r) => ({ id: Number(r.room_id ?? r.id), name: r.custom_name || r.name || this._t('Room {id}', { id: r.room_id }), x: r.x, y: r.y, x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1 }));
       }
       const all = this._a.rooms;
       if (all && typeof all === 'object') {
@@ -617,8 +747,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const ss = this._live('sensor', 'status');
       let text = ss ? this._fmt(ss) : (human(a.status) || this._fmt(v));
       const fl = this._dockFlags();
-      if (fl.washingPaused) text = 'Mop wash paused';
-      else if (fl.washing) text = 'Washing mops';
+      if (fl.washingPaused) text = this._t('Mop wash paused');
+      else if (fl.washing) text = this._t('Washing mops');
       const room = this._live('sensor', 'current_room')?.state;
       if ((running || paused) && room) text += ` · ${room}`;
       let dot = '';
@@ -643,14 +773,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       try { out = stateObj && this._hass.formatEntityState ? this._hass.formatEntityState(stateObj, raw) : ''; } catch (e) { out = ''; }
       if (!out || out === raw) out = human(raw);
       const opts = stateObj?.attributes?.options;
-      if (/_suction_level$/.test(stateObj?.entity_id || '') && SUCTION_APP[raw] && Array.isArray(opts) && !opts.includes('max')) out = SUCTION_APP[raw];
+      if (/_suction_level$/.test(stateObj?.entity_id || '') && SUCTION_APP[raw] && Array.isArray(opts) && !opts.includes('max')) out = this._t(SUCTION_APP[raw]);
       return out;
     }
 
     /** Label for a select option: short form for compact buttons, otherwise translated. */
     _opt(stateObj, o, short = true) {
       const full = this._fmt(stateObj, o);
-      return short ? (SHORT[o] || SHORT[full] || full) : full;  // suction keys are absent from SHORT on purpose
+      const s = short && (SHORT[o] || SHORT[full]);  // suction keys are absent from SHORT on purpose
+      return s ? this._t(`short|${s}`) : full;
     }
 
     /** Numeric sensor with its own unit, rounded for display. */
@@ -680,7 +811,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         const sens = this._live('sensor', `${key}_time_left`);
         const tl = sens ? num(sens.state) : num(a[`${key}_time_left`]);
         const unit = sens?.attributes?.unit_of_measurement || (key === 'silver_ion' ? 'd' : 'h');
-        out.push({ key, pct: clamp(p, 0, 100), timeLeft: tl, unit, name: (CONS[key] || [human(key)])[0], icon: (CONS[key] || [0, 'mdi:wrench-outline'])[1] });
+        out.push({ key, pct: clamp(p, 0, 100), timeLeft: tl, unit, name: CONS[key] ? this._t(CONS[key][0]) : human(key), icon: (CONS[key] || [0, 'mdi:wrench-outline'])[1] });
       }
       return out;
     }
@@ -692,24 +823,24 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const notes = [];
       const faults = a.faults && typeof a.faults === 'object' ? Object.entries(a.faults) : [];
       for (const [code, text] of faults) {
-        notes.push({ id: `fault_${code}`, level: 'crit', icon: 'mdi:alert-circle-outline', title: human(text), desc: 'Reported by the robot.', action: this._id('button', 'clear_warning') ? { a: 'press', e: this._id('button', 'clear_warning'), label: 'Clear warning' } : null });
+        notes.push({ id: `fault_${code}`, level: 'crit', icon: 'mdi:alert-circle-outline', title: human(text), desc: this._t('Reported by the robot.'), action: this._id('button', 'clear_warning') ? { a: 'press', e: this._id('button', 'clear_warning'), label: this._t('Clear warning') } : null });
       }
       if (!faults.length && a.error && !/no error/i.test(String(a.error)) && this._v.state === 'error') {
-        notes.push({ id: 'error', level: 'crit', icon: 'mdi:alert-circle-outline', title: human(a.error), desc: 'Reported by the robot.', action: null });
+        notes.push({ id: 'error', level: 'crit', icon: 'mdi:alert-circle-outline', title: human(a.error), desc: this._t('Reported by the robot.'), action: null });
       }
       for (const c of this._consumables()) {
         if (c.pct > warn) continue;
         const level = c.pct <= crit ? 'crit' : 'warn';
-        const left = c.timeLeft !== null ? `, about ${c.timeLeft} ${c.unit} left` : '';
-        notes.push({ id: `cons_${c.key}`, level, icon: c.icon, title: `${c.name} at ${c.pct}%`, desc: c.key === 'detergent' ? `Refill the detergent cartridge soon${left}.` : `Time to clean or replace${left}.`, action: { a: 'reset', v: c.key, label: c.key === 'detergent' ? 'I refilled it' : 'Mark as done' } });
+        const left = c.timeLeft !== null ? this._t(', about {n} {unit} left', { n: c.timeLeft, unit: c.unit }) : '';
+        notes.push({ id: `cons_${c.key}`, level, icon: c.icon, title: this._t('{name} at {pct}%', { name: c.name, pct: c.pct }), desc: this._t(c.key === 'detergent' ? 'Refill the detergent cartridge soon{left}.' : 'Time to clean or replace{left}.', { left }), action: { a: 'reset', v: c.key, label: this._t(c.key === 'detergent' ? 'I refilled it' : 'Mark as done') } });
       }
       if (a.low_water_warning && !/no warning/i.test(String(a.low_water_warning))) {
-        notes.push({ id: 'low_water', level: 'warn', icon: 'mdi:water-alert-outline', title: human(a.low_water_warning), desc: 'Check the clean water tank.', action: null });
+        notes.push({ id: 'low_water', level: 'warn', icon: 'mdi:water-alert-outline', title: human(a.low_water_warning), desc: this._t('Check the clean water tank.'), action: null });
       }
       const tanks = [['dust_bag_status', 'Dust bag'], ['clean_water_tank_status', 'Clean water tank'], ['dirty_water_tank_status', 'Dirty water tank'], ['detergent_status', 'Detergent cartridge']];
       for (const [k, label] of tanks) {
         const v = a[k];
-        if (v && !/^(installed|normal|idle|ok)$/i.test(String(v))) notes.push({ id: `tank_${k}`, level: 'warn', icon: 'mdi:home-alert-outline', title: `${label}: ${human(v)}`, desc: 'Check the dock.', action: null });
+        if (v && !/^(installed|normal|idle|ok)$/i.test(String(v))) notes.push({ id: `tank_${k}`, level: 'warn', icon: 'mdi:home-alert-outline', title: this._t('{label}: {value}', { label: this._t(label), value: human(v) }), desc: this._t('Check the dock.'), action: null });
       }
       const now = Date.now();
       return includeSnoozed ? notes : notes.filter((n) => !(this._snooze[n.id] > now));
@@ -799,7 +930,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!this._map) this._discover();
       const v = this._v;
       if (!v) {
-        root.innerHTML = `<style>${CSS}</style><ha-card class="dv" style="--dv-h:auto;min-height:0"><div class="pad"><b>Dreame Vacuum Panel Card</b><p class="muted">Entity <code>${esc(this._config.entity)}</code> not found.</p></div></ha-card>`;
+        root.innerHTML = `<style>${CSS}</style><ha-card class="dv" style="--dv-h:auto;min-height:0"><div class="pad"><b>Dreame Vacuum Panel Card</b><p class="muted">${this._t('Entity {id} not found.', { id: `<code>${esc(this._config.entity)}</code>` })}</p></div></ha-card>`;
         this._shellKey = null;
         return;
       }
@@ -946,9 +1077,9 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     /* ---------- shells ---------- */
     _mapShell(withChrome = true) {
-      return `<section class="panel mapbox" aria-label="Map"><div class="map" data-map>
-        <div class="map-empty" data-empty hidden>No map yet. Check the map camera entity (camera.*_map).</div>
-        <div class="fit" data-fit><img data-img alt="Vacuum map" draggable="false"><div class="ov" data-r="overlay"></div></div>
+      return `<section class="panel mapbox" aria-label="${this._t('Map')}"><div class="map" data-map>
+        <div class="map-empty" data-empty hidden>${this._t('No map yet. Check the map camera entity (camera.*_map).')}</div>
+        <div class="fit" data-fit><img data-img alt="${this._t('Vacuum map')}" draggable="false"><div class="ov" data-r="overlay"></div></div>
         ${withChrome ? '<div class="map-top" data-r="maptop"></div><div class="map-bottom" data-r="mapbottom"></div>' : ''}
       </div></section>`;
     }
@@ -956,16 +1087,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _shell(lay, view) {
       if (lay === 'desktop') {
         if (view === 'clean') {
-          return `<div class="desk"><nav class="panel rail" data-r="nav" aria-label="Vacuum sections"></nav>
+          return `<div class="desk"><nav class="panel rail" data-r="nav" aria-label="${this._t('Vacuum sections')}"></nav>
             <div class="col"><section class="panel" data-r="status"></section>${this._mapShell()}</div>
             <div class="col scroll"><section class="panel pad" data-r="cleaning"></section><section class="panel pad" data-r="dock"></section></div>
             <div data-r="pop"></div></div>`;
         }
         if (view === 'remote') {
-          return `<div class="desk rm"><nav class="panel rail" data-r="nav" aria-label="Vacuum sections"></nav>
+          return `<div class="desk rm"><nav class="panel rail" data-r="nav" aria-label="${this._t('Vacuum sections')}"></nav>
             <div class="col">${this._mapShell(false)}</div><div class="col scroll"><section class="panel pad" data-r="view"></section></div><div data-r="pop"></div></div>`;
         }
-        return `<div class="desk v"><nav class="panel rail" data-r="nav" aria-label="Vacuum sections"></nav><div class="view" data-r="view"></div><div data-r="pop"></div></div>`;
+        return `<div class="desk v"><nav class="panel rail" data-r="nav" aria-label="${this._t('Vacuum sections')}"></nav><div class="view" data-r="view"></div><div data-r="pop"></div></div>`;
       }
       if (lay === 'tablet') {
         if (view === 'clean') {
@@ -973,18 +1104,18 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
             <section class="panel" data-r="status"></section>
             <div class="tab-map">${this._mapShell().replace('class="panel mapbox"', 'class="panel mapbox" style="height:100%"')}</div>
             <div class="tab-grid"><section class="panel pad" data-r="cleaning"></section><div class="stack"><section class="panel pad" data-r="dock"></section><div data-r="carebanner"></div></div></div>
-            </div><nav class="tabs" data-r="nav" aria-label="Vacuum sections"></nav><div data-r="pop"></div></div>`;
+            </div><nav class="tabs" data-r="nav" aria-label="${this._t('Vacuum sections')}"></nav><div data-r="pop"></div></div>`;
         }
         if (view === 'remote') {
           return `<div class="tab"><div class="tab-scroll"><div class="tab-map">${this._mapShell(false).replace('class="panel mapbox"', 'class="panel mapbox" style="height:100%"')}</div><section class="panel pad" data-r="view"></section></div><nav class="tabs" data-r="nav"></nav><div data-r="pop"></div></div>`;
         }
-        return `<div class="tab"><div class="tab-scroll" data-r="view"></div><nav class="tabs" data-r="nav" aria-label="Vacuum sections"></nav><div data-r="pop"></div></div>`;
+        return `<div class="tab"><div class="tab-scroll" data-r="view"></div><nav class="tabs" data-r="nav" aria-label="${this._t('Vacuum sections')}"></nav><div data-r="pop"></div></div>`;
       }
       // phone
       if (view === 'clean') {
         return `<div class="ph">${this._mapShell(false).replace('class="panel mapbox"', 'class="mapbox" style="position:absolute;inset:0;border:0;border-radius:0"')}
           <div class="ph-top" data-r="phtop"></div><div data-r="toast"></div>
-          <section class="sheet" data-r="sheet" aria-label="Controls"></section><div data-r="pop"></div></div>`;
+          <section class="sheet" data-r="sheet" aria-label="${this._t('Controls')}"></section><div data-r="pop"></div></div>`;
       }
       return `<div class="ph v"><header class="ph-head" data-r="phhead"></header><div class="view" data-r="view"></div><div data-r="pop"></div></div>`;
     }
@@ -1017,7 +1148,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         ['settings', 'Settings', 'mdi:tune-variant'],
         ['history', 'History', 'mdi:history'],
         ['remote', 'Remote', 'mdi:gamepad-variant-outline'],
-      ];
+      ].map(([id, label, icon]) => [id, this._t(label), icon]);
     }
 
     _nav() {
@@ -1036,7 +1167,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     // Back / HA-menu buttons for kiosk mode (HA header hidden). Shared by every layout.
     _haNav(cls = 'hab') {
       const c = this._config;
-      return `${c.show_back ? `<button class="${cls}" data-a="nav" data-v="back" aria-label="Back">${ic('mdi:arrow-left')}</button>` : ''}${c.show_menu ? `<button class="${cls}" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}`;
+      return `${c.show_back ? `<button class="${cls}" data-a="nav" data-v="back" aria-label="${this._t('Back')}">${ic('mdi:arrow-left')}</button>` : ''}${c.show_menu ? `<button class="${cls}" data-a="nav" data-v="menu" aria-label="${this._t('Open Home Assistant menu')}">${ic('mdi:menu')}</button>` : ''}`;
     }
 
     _battery() {
@@ -1056,18 +1187,18 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       else if (s.paused) { label = 'Resume'; }
       else {
         const n = u.sel.length;
-        if (u.target === 'rooms') { label = n ? `Clean ${n} room${n === 1 ? '' : 's'}` : 'Pick rooms'; dis = !n; }
+        if (u.target === 'rooms') { label = n ? (n === 1 ? 'Clean {n} room' : 'Clean {n} rooms') : 'Pick rooms'; dis = !n; }
         else if (u.target === 'zone') { label = u.zone ? 'Clean zone' : 'Draw a zone'; dis = !u.zone; }
         else if (u.target === 'spot') { label = u.spot ? 'Spot clean' : 'Tap the map'; dis = !u.spot; }
         else label = 'Clean all';
       }
-      return `<button class="${cls}" data-a="run" ${dis ? 'disabled' : ''} ${extra}>${ic(icon)}${label}</button>`;
+      return `<button class="${cls}" data-a="run" ${dis ? 'disabled' : ''} ${extra}>${ic(icon)}${this._t(label, { n: u.sel.length })}</button>`;
     }
 
     /** Care alerts bell, the same one the phone layout shows. */
     _bell(cls = 'ibtn') {
       const n = this._notes().length;
-      return `<button class="${cls} ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="Care alerts${n ? `, ${n} new` : ''}" title="Care alerts">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>`;
+      return `<button class="${cls} ${this._ui.pop === 'care' ? 'on' : ''}" data-a="pop" data-v="care" aria-label="${this._t('Care alerts')}${n ? this._t(', {n} new', { n }) : ''}" title="${this._t('Care alerts')}">${ic('mdi:bell-outline')}${n ? `<span class="badge">${n}</span>` : ''}</button>`;
     }
 
     _statusBlock() {
@@ -1086,16 +1217,16 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           </div>
           ${showProg ? `<div class="rowf"><div class="bar grow"><i style="width:${clamp(prog, 0, 100)}%"></i></div><span class="small" style="font-variant-numeric:tabular-nums">${prog}%</span></div>` : ''}
           <div class="meta">
-            ${bat.v !== null ? `<span>${ic(bat.icon)}<b>${bat.v}%</b> battery</span>` : ''}
-            ${area ? `<span>${ic('mdi:texture-box')}<b>${esc(area.text)}</b> ${s.running || s.paused ? 'cleaned' : 'last run'}</span>` : ''}
+            ${bat.v !== null ? `<span>${ic(bat.icon)}<b>${bat.v}%</b> ${this._t('battery')}</span>` : ''}
+            ${area ? `<span>${ic('mdi:texture-box')}<b>${esc(area.text)}</b> ${this._t(s.running || s.paused ? 'cleaned' : 'last run')}</span>` : ''}
             ${time ? `<span>${ic('mdi:timer-outline')}<b>${esc(time.text)}</b></span>` : ''}
           </div>
         </div>
         <div class="rowf">
           ${this._bell()}
-          <button class="ibtn" data-a="svc" data-v="locate" aria-label="Locate robot" title="Locate">${ic('mdi:map-marker-radius-outline')}</button>
-          <button class="ibtn" data-a="svc" data-v="return_to_base" aria-label="Send to dock" title="Send to dock">${ic('mdi:home-import-outline')}</button>
-          <button class="ibtn" data-a="svc" data-v="stop" aria-label="Stop" title="Stop">${ic('mdi:stop')}</button>
+          <button class="ibtn" data-a="svc" data-v="locate" aria-label="${this._t('Locate robot')}" title="${this._t('Locate')}">${ic('mdi:map-marker-radius-outline')}</button>
+          <button class="ibtn" data-a="svc" data-v="return_to_base" aria-label="${this._t('Send to dock')}" title="${this._t('Send to dock')}">${ic('mdi:home-import-outline')}</button>
+          <button class="ibtn" data-a="svc" data-v="stop" aria-label="${this._t('Stop')}" title="${this._t('Stop')}">${ic('mdi:stop')}</button>
           ${this._runButton('btn pri', 'style="min-width:150px;margin-left:6px"')}
         </div>
       </div>`;
@@ -1138,15 +1269,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const hs = this._live('select', 'mop_pad_humidity');
       const idx = hs ? ['slightly_dry', 'moist', 'wet'].indexOf(hs.state) : -1;
       const band = idx >= 0 ? idx : third;
-      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third: band, name: WET_NAMES[band], sizes };
+      return { id: st.entity_id, v, min, max, step: st.attributes.step ?? 1, third: band, name: this._t(WET_NAMES[band]), sizes };
     }
 
     _wetControl(dis) {
       const w = this._wet();
       if (!w) return '';
-      return `<div class="stack-s"><div class="between"><span class="lbl">Wetness</span><span class="small muted">${esc(w.name)} · ${w.v}</span></div>
-        <div class="${dis ? 'dis' : ''}" style="${dis ? 'opacity:.5;pointer-events:none' : ''}"><input class="wet" type="range" min="${w.min}" max="${w.max}" step="${w.step}" value="${w.v}" data-a="num" data-e="${w.id}" aria-label="Wetness" aria-valuetext="${esc(w.name)}" ${dis ? 'disabled' : ''}>
-        <div class="thirds">${WET_SHORT.map((n, i) => `<span class="${i === w.third ? 'on' : ''}" style="flex:${w.sizes[i]} 1 0">${n}</span>`).join('')}</div></div></div>`;
+      return `<div class="stack-s"><div class="between"><span class="lbl">${this._t('Wetness')}</span><span class="small muted">${esc(w.name)} · ${w.v}</span></div>
+        <div class="${dis ? 'dis' : ''}" style="${dis ? 'opacity:.5;pointer-events:none' : ''}"><input class="wet" type="range" min="${w.min}" max="${w.max}" step="${w.step}" value="${w.v}" data-a="num" data-e="${w.id}" aria-label="${this._t('Wetness')}" aria-valuetext="${esc(w.name)}" ${dis ? 'disabled' : ''}>
+        <div class="thirds">${WET_SHORT.map((n, i) => `<span class="${i === w.third ? 'on' : ''}" style="flex:${w.sizes[i]} 1 0">${this._t(n)}</span>`).join('')}</div></div></div>`;
     }
 
     _cleaningControls() {
@@ -1157,31 +1288,31 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const parts = [];
       const toggles = [];
       if (genius) toggles.push(this._seg(genius, { label: 'CleanGenius' }));
-      const cust = this._switchRow('customized_cleaning', 'Per-room settings', 'Use each room’s saved preferences', 'mdi:view-grid-outline');
+      const cust = this._switchRow('customized_cleaning', this._t('Per-room settings'), this._t('Use each room’s saved preferences'), 'mdi:view-grid-outline');
       if (cust) toggles.push(cust);
       if (toggles.length) parts.push(`<div class="stack-s">${toggles.join('')}</div>`);
-      parts.push(this._seg(this._select('cleaning_mode'), { label: 'Mode', icons: true }));
-      parts.push(this._seg(this._select('suction_level'), { label: 'Suction', dis: manualDis }));
-      parts.push(this._wetControl(manualDis) || this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume', dis: manualDis }));
-      parts.push(this._seg(this._select('cleaning_route'), { label: 'Route', dis: manualDis }));
+      parts.push(this._seg(this._select('cleaning_mode'), { label: this._t('Mode'), icons: true }));
+      parts.push(this._seg(this._select('suction_level'), { label: this._t('Suction'), dis: manualDis }));
+      parts.push(this._wetControl(manualDis) || this._seg(this._select('mop_pad_humidity') || this._select('water_volume'), { label: this._t(this._select('mop_pad_humidity') ? 'Mop humidity' : 'Water volume'), dis: manualDis }));
+      parts.push(this._seg(this._select('cleaning_route'), { label: this._t('Route'), dis: manualDis }));
       if (this._ui.target !== 'all') {
-        parts.push(`<div class="stack-s"><span class="lbl">Passes</span><div class="seg" role="group" aria-label="Passes">${[1, 2, 3].map((p) => `<button class="${this._ui.passes === p ? 'on' : ''}" aria-pressed="${this._ui.passes === p}" data-a="passes" data-v="${p}">${p}×</button>`).join('')}</div></div>`);
+        parts.push(`<div class="stack-s"><span class="lbl">${this._t('Passes')}</span><div class="seg" role="group" aria-label="${this._t('Passes')}">${[1, 2, 3].map((p) => `<button class="${this._ui.passes === p ? 'on' : ''}" aria-pressed="${this._ui.passes === p}" data-a="passes" data-v="${p}">${p}×</button>`).join('')}</div></div>`);
       }
-      if (manualDis) parts.push(`<div class="xs muted">${geniusOn ? 'CleanGenius is choosing suction, water and route.' : 'Per-room settings are on, so each room uses its own settings.'}</div>`);
+      if (manualDis) parts.push(`<div class="xs muted">${this._t(geniusOn ? 'CleanGenius is choosing suction, water and route.' : 'Per-room settings are on, so each room uses its own settings.')}</div>`);
       return parts.filter(Boolean).join('');
     }
 
     _scopeText() {
       const u = this._ui;
       const rooms = this._rooms();
-      if (u.target === 'rooms') return `${u.sel.length} of ${rooms.length} rooms`;
-      if (u.target === 'zone') return u.zone ? '1 zone' : 'No zone yet';
-      if (u.target === 'spot') return u.spot ? '1 spot' : 'No spot yet';
-      return 'Whole map';
+      if (u.target === 'rooms') return this._t('{n} of {total} rooms', { n: u.sel.length, total: rooms.length });
+      if (u.target === 'zone') return this._t(u.zone ? '1 zone' : 'No zone yet');
+      if (u.target === 'spot') return this._t(u.spot ? '1 spot' : 'No spot yet');
+      return this._t('Whole map');
     }
 
     _cleaningBlock() {
-      return `<div class="stack" style="gap:16px"><div class="between"><h2 class="h">Cleaning</h2><span class="small muted">${esc(this._scopeText())}</span></div>${this._cleaningControls()}</div>`;
+      return `<div class="stack" style="gap:16px"><div class="between"><h2 class="h">${this._t('Cleaning')}</h2><span class="small muted">${esc(this._scopeText())}</span></div>${this._cleaningControls()}</div>`;
     }
 
     /* On Beep-0 the `washing` attribute stays false during a mop wash; the reliable signal is the
@@ -1198,24 +1329,24 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _dockState() {
       const a = this._a;
       const f = this._dockFlags();
-      if (f.washingPaused) return 'Mop wash paused';
-      if (f.washing) return 'Washing mops';
+      if (f.washingPaused) return this._t('Mop wash paused');
+      if (f.washing) return this._t('Washing mops');
       if (f.drying) {
         const left = num(a.drying_left ?? this._live('sensor', 'drying_left')?.state);
-        return `Drying mops${left ? ` · ${left} min left` : ''}`;
+        return `${this._t('Drying mops')}${left ? ` · ${this._t('{n} min left', { n: left })}` : ''}`;
       }
       const ae = this._live('sensor', 'auto_empty_status');
       if (ae && !/idle/i.test(ae.state)) return this._fmt(ae);
       if (!ae && a.auto_empty_status && !/idle/i.test(a.auto_empty_status)) return human(a.auto_empty_status);
       const base = this._live('sensor', 'self_wash_base_status');
       if (base && !/idle/i.test(base.state)) return this._fmt(base);
-      return a.docked || this._v.state === 'docked' ? 'Ready · robot docked' : 'Ready';
+      return this._t(a.docked || this._v.state === 'docked' ? 'Ready · robot docked' : 'Ready');
     }
 
     _levels() {
       const a = this._a;
       const lv = [];
-      const item = (cls, icon, label, value) => lv.push(`<div class="lv ${cls}">${ic(icon)}<span><span class="muted">${label}</span><b>${esc(value)}</b></span></div>`);
+      const item = (cls, icon, label, value) => lv.push(`<div class="lv ${cls}">${ic(icon)}<span><span class="muted">${this._t(label)}</span><b>${esc(value)}</b></span></div>`);
       const tank = (k, label, icon) => {
         const v = a[k];
         if (v === undefined) return;
@@ -1237,17 +1368,17 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const empty = this._id('button', 'start_auto_empty');
       if (empty) {
         const busy = a.auto_empty_status && !/idle/i.test(a.auto_empty_status);
-        acts.push(`<button class="tile ${busy ? 'on' : ''}" data-a="press" data-e="${empty}" ${busy ? 'disabled' : ''}>${ic('mdi:delete-empty-outline')}${busy ? 'Emptying…' : 'Empty bin'}</button>`);
+        acts.push(`<button class="tile ${busy ? 'on' : ''}" data-a="press" data-e="${empty}" ${busy ? 'disabled' : ''}>${ic('mdi:delete-empty-outline')}${this._t(busy ? 'Emptying…' : 'Empty bin')}</button>`);
       }
       const wash = this._id('button', 'self_clean') || this._id('button', 'start_washing');
       const fl = this._dockFlags();
-      if (wash) acts.push(`<button class="tile ${fl.washing || fl.washingPaused ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${fl.washing || fl.washingPaused}">${ic('mdi:water-sync')}${fl.washingPaused ? 'Resume wash' : fl.washing ? 'Pause wash' : 'Wash mops'}</button>`);
+      if (wash) acts.push(`<button class="tile ${fl.washing || fl.washingPaused ? 'on' : ''}" data-a="press" data-e="${wash}" aria-pressed="${fl.washing || fl.washingPaused}">${ic('mdi:water-sync')}${this._t(fl.washingPaused ? 'Resume wash' : fl.washing ? 'Pause wash' : 'Wash mops')}</button>`);
       const dry = this._id('button', 'manual_drying') || this._id('button', 'start_drying');
-      if (dry) acts.push(`<button class="tile ${a.drying ? 'on' : ''}" data-a="press" data-e="${a.drying && this._id('button', 'stop_drying') ? this._id('button', 'stop_drying') : dry}" aria-pressed="${!!a.drying}">${ic('mdi:heat-wave')}${a.drying ? 'Stop drying' : 'Dry mops'}</button>`);
+      if (dry) acts.push(`<button class="tile ${a.drying ? 'on' : ''}" data-a="press" data-e="${a.drying && this._id('button', 'stop_drying') ? this._id('button', 'stop_drying') : dry}" aria-pressed="${!!a.drying}">${ic('mdi:heat-wave')}${this._t(a.drying ? 'Stop drying' : 'Dry mops')}</button>`);
       // Pause/Resume is one toggle button, so a running or paused wash gets its own clear Stop.
       // vacuum.stop ends the wash task (confirmed on Beep-0); the tile only toggles pause.
       const stopWash = fl.washing || fl.washingPaused
-        ? `<button class="btn stopwash" data-a="svc" data-v="stop" style="width:100%;margin-bottom:10px">${ic('mdi:stop-circle-outline')}Stop wash</button>` : '';
+        ? `<button class="btn stopwash" data-a="svc" data-v="stop" style="width:100%;margin-bottom:10px">${ic('mdi:stop-circle-outline')}${this._t('Stop wash')}</button>` : '';
       return acts.length ? `${stopWash}<div class="grid3">${acts.join('')}</div>` : stopWash;
     }
 
@@ -1255,12 +1386,12 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const a = this._a;
       const prog = a.drying ? num(a.drying_progress) : null;
       return `<div class="stack" style="gap:14px">
-        <div class="between"><div class="grow"><h2 class="h">Dock</h2><div class="small muted" style="margin-top:2px">${esc(this._dockState())}</div></div>
-          ${this._ui.view === 'care' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="care">Dock & care</button>`}</div>
+        <div class="between"><div class="grow"><h2 class="h">${this._t('Dock')}</h2><div class="small muted" style="margin-top:2px">${esc(this._dockState())}</div></div>
+          ${this._ui.view === 'care' ? '' : `<button class="${phone ? 'btn sm' : 'link'}" data-a="view" data-v="care">${esc(this._t('Dock & care'))}</button>`}</div>
         ${prog !== null ? `<div class="bar"><i style="width:${clamp(prog, 0, 100)}%"></i></div>` : ''}
         ${this._levels()}
         ${this._dockActions()}
-        ${phone ? `<button class="btn" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}Send robot to dock</button>` : ''}
+        ${phone ? `<button class="btn" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}${this._t('Send robot to dock')}</button>` : ''}
       </div>`;
     }
 
@@ -1269,19 +1400,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!notes.length) return '';
       const n = notes[0];
       return `<button class="alert ${n.level === 'crit' ? 'crit' : ''}" data-a="pop" data-v="care">${ic(n.icon, `style="color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})"`)}
-        <span class="grow"><b style="font-weight:500;font-size:14px;display:block">${esc(n.title)}</b><span class="xs muted">${notes.length > 1 ? `+${notes.length - 1} more care ${notes.length === 2 ? 'alert' : 'alerts'}` : esc(n.desc)}</span></span>${ic('mdi:chevron-right')}</button>`;
+        <span class="grow"><b style="font-weight:500;font-size:14px;display:block">${esc(n.title)}</b><span class="xs muted">${notes.length > 1 ? this._t(notes.length === 2 ? '+{n} more care alert' : '+{n} more care alerts', { n: notes.length - 1 }) : esc(n.desc)}</span></span>${ic('mdi:chevron-right')}</button>`;
     }
 
     _targets(cls = '') {
       const t = this._ui.target;
-      const opts = [['all', 'All rooms'], ['rooms', 'Rooms'], ['zone', 'Zone'], ['spot', 'Spot']];
-      return `<div class="seg ${cls}" role="group" aria-label="What to clean">${opts.map(([id, l]) => `<button class="${t === id ? 'on' : ''}" aria-pressed="${t === id}" data-a="target" data-v="${id}" style="font-size:14px">${l}</button>`).join('')}</div>`;
+      const opts = [['all', 'target|All rooms'], ['rooms', 'Rooms'], ['zone', 'Zone'], ['spot', 'Spot']];
+      return `<div class="seg ${cls}" role="group" aria-label="${this._t('What to clean')}">${opts.map(([id, l]) => `<button class="${t === id ? 'on' : ''}" aria-pressed="${t === id}" data-a="target" data-v="${id}" style="font-size:14px">${this._t(l)}</button>`).join('')}</div>`;
     }
 
     _chips(wrap) {
       const sel = this._ui.sel;
       const rooms = this._rooms();
-      if (!rooms.length) return '<span class="small muted">No rooms found on this map.</span>';
+      if (!rooms.length) return `<span class="small muted">${this._t('No rooms found on this map.')}</span>`;
       return `<div class="chips ${wrap ? 'wrap' : ''}">${rooms.map((r) => {
         const i = sel.indexOf(r.id);
         return `<button class="chip ${i >= 0 ? 'on' : ''}" aria-pressed="${i >= 0}" data-a="room" data-v="${r.id}">${i >= 0 ? `${i + 1} · ` : ''}${esc(r.name)}</button>`;
@@ -1290,20 +1421,21 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
     _hint() {
       const u = this._ui;
-      if (u.target === 'all') return 'Cleans every room on this map';
+      const clear = `<button data-a="clearsel">${this._t('Clear')}</button>`;
+      if (u.target === 'all') return this._t('Cleans every room on this map');
       if (u.target === 'zone') {
-        if (!u.zone) return 'Drag on the map to draw a zone';
+        if (!u.zone) return this._t('Drag on the map to draw a zone');
         const w = Math.abs(u.zone[2] - u.zone[0]) / 1000, h = Math.abs(u.zone[3] - u.zone[1]) / 1000;
-        return `Zone ${this._dim(w, h)}<button data-a="clearsel">Clear</button>`;
+        return `${this._t('Zone {size}', { size: this._dim(w, h) })}${clear}`;
       }
-      if (u.target === 'spot') return u.spot ? 'Spot placed · tap elsewhere to move it<button data-a="clearsel">Clear</button>' : 'Tap the map to place a spot';
+      if (u.target === 'spot') return u.spot ? `${this._t('Spot placed · tap elsewhere to move it')}${clear}` : this._t('Tap the map to place a spot');
       return '';
     }
 
     _mapTop() {
       const sm = this._select('selected_map');
       let floor = '';
-      if (sm && sm.options.length > 1) floor = `<label class="mpill">${ic('mdi:layers-outline')}<select data-a="optsel" data-e="${sm.id}" aria-label="Floor">${sm.options.map((o) => `<option ${o === sm.value ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
+      if (sm && sm.options.length > 1) floor = `<label class="mpill">${ic('mdi:layers-outline')}<select data-a="optsel" data-e="${sm.id}" aria-label="${this._t('Floor')}">${sm.options.map((o) => `<option ${o === sm.value ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
       else if (this._a.selected_map) floor = `<span class="mpill">${ic('mdi:layers-outline')}${esc(this._a.selected_map)}</span>`;
       return `${floor}<span></span>`;
     }
@@ -1324,7 +1456,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           const r = rooms.find((x) => x.id === id);
           if (!r || r.x === undefined) return;
           const p = this._pctPos(r.x, r.y);
-          html += `<button class="pill" style="left:${p.l}%;top:${p.t}%" data-a="room" data-v="${r.id}" aria-label="Deselect ${esc(r.name)}"><b>${i + 1}</b>${esc(r.name)}</button>`;
+          html += `<button class="pill" style="left:${p.l}%;top:${p.t}%" data-a="room" data-v="${r.id}" aria-label="${this._t('Deselect {name}', { name: esc(r.name) })}"><b>${i + 1}</b>${esc(r.name)}</button>`;
         });
       }
       if (u.target === 'zone' && u.zone) html += this._zoneBox(u.zone);
@@ -1355,21 +1487,21 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const p = this._ui.pop;
       if (!p) return '';
       if (p === 'menu') {
-        return `<button class="scrim" data-a="closepop" aria-label="Close menu"></button>
+        return `<button class="scrim" data-a="closepop" aria-label="${this._t('Close menu')}"></button>
           <div class="popover menu" role="menu" style="top:70px">${this._views().filter(([id]) => id !== 'clean').map(([id, l, i]) => `<button role="menuitem" data-a="view" data-v="${id}">${ic(i)}${l}${id === 'care' && this._notes().length ? `<span class="badge" style="position:static;margin-left:auto">${this._notes().length}</span>` : ''}</button>`).join('')}</div>`;
       }
       const notes = this._notes();
       const all = this._notes(true);
       const snoozed = all.length - notes.length;
-      return `<button class="scrim" data-a="closepop" aria-label="Close care alerts"></button>
-        <section class="popover" role="dialog" aria-label="Care alerts">
-          <div class="between" style="padding:8px 16px"><span class="h">Care</span><button class="link" data-a="view" data-v="care">All parts</button></div>
+      return `<button class="scrim" data-a="closepop" aria-label="${this._t('Close care alerts')}"></button>
+        <section class="popover" role="dialog" aria-label="${this._t('Care alerts')}">
+          <div class="between" style="padding:8px 16px"><span class="h">${this._t('Care')}</span><button class="link" data-a="view" data-v="care">${this._t('All parts')}</button></div>
           ${notes.map((n) => `<div class="note ${n.level === 'crit' ? 'crit' : ''}"><span class="nic">${ic(n.icon)}</span><div class="grow">
               <div style="font-size:14px;font-weight:500">${esc(n.title)}</div><div class="small muted" style="margin-top:2px">${esc(n.desc)}</div>
               <div class="rowf" style="margin-top:10px;flex-wrap:wrap">${n.action ? `<button class="btn sm" data-a="${n.action.a}" ${n.action.e ? `data-e="${n.action.e}"` : ''} ${n.action.v ? `data-v="${n.action.v}"` : ''}>${esc(n.action.label)}</button>` : ''}
-              <button class="btn sm ghost" data-a="snooze" data-v="${n.id}">Remind me tomorrow</button></div></div></div>`).join('')}
-          ${!notes.length ? '<div class="note"><span class="small muted">All parts are in good shape.</span></div>' : ''}
-          ${snoozed ? `<div class="note"><span class="xs muted grow">${snoozed} snoozed until tomorrow</span><button class="btn sm ghost" data-a="unsnooze">Show</button></div>` : ''}
+              <button class="btn sm ghost" data-a="snooze" data-v="${n.id}">${this._t('Remind me tomorrow')}</button></div></div></div>`).join('')}
+          ${!notes.length ? `<div class="note"><span class="small muted">${this._t('All parts are in good shape.')}</span></div>` : ''}
+          ${snoozed ? `<div class="note"><span class="xs muted grow">${this._t('{n} snoozed until tomorrow', { n: snoozed })}</span><button class="btn sm ghost" data-a="unsnooze">${this._t('Show')}</button></div>` : ''}
         </section>`;
     }
 
@@ -1382,7 +1514,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           <div class="ell" style="font-size:14px;font-weight:500">${esc(s.text)}</div>
           <div class="ell xs muted">${esc(this._title())}${bat.v !== null ? ` · ${bat.v}%` : ''}${s.running || s.paused ? (this._measure('cleaned_area', 'cleaned_area', 'm²') ? ` · ${esc(this._measure('cleaned_area', 'cleaned_area', 'm²').text)}` : '') : ''}</div></div></div>
         ${this._bell('fab')}
-        <button class="fab ${this._ui.pop === 'menu' ? 'on' : ''}" data-a="pop" data-v="menu" aria-label="More">${ic('mdi:dots-vertical')}</button>`;
+        <button class="fab ${this._ui.pop === 'menu' ? 'on' : ''}" data-a="pop" data-v="menu" aria-label="${this._t('More')}">${ic('mdi:dots-vertical')}</button>`;
     }
 
     _toast() {
@@ -1392,7 +1524,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!notes.length) return '';
       const n = notes[0];
       return `<button class="toast ${n.level === 'crit' ? 'crit' : ''}" data-a="pop" data-v="care">${ic(n.icon, `style="--mdc-icon-size:18px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})"`)}
-        <span class="grow ell"><b style="font-weight:500">${esc(n.title)}</b>${notes.length > 1 ? `<span class="muted"> · +${notes.length - 1} more</span>` : ''}</span><span style="font-weight:500;padding:0 8px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})">View</span></button>`;
+        <span class="grow ell"><b style="font-weight:500">${esc(n.title)}</b>${notes.length > 1 ? `<span class="muted"> · ${this._t('+{n} more', { n: notes.length - 1 })}</span>` : ''}</span><span style="font-weight:500;padding:0 8px;color:var(${n.level === 'crit' ? '--dv-errt' : '--dv-warnt'})">${this._t('View')}</span></button>`;
     }
 
     _summary() {
@@ -1412,19 +1544,19 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
     _sheet() {
       const u = this._ui;
       const dockTab = u.sheetTab === 'dock';
-      const dockShort = this._dockFlags().busy || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready';
+      const dockShort = this._t(this._dockFlags().busy || (this._a.auto_empty_status && !/idle/i.test(this._a.auto_empty_status)) ? 'Busy' : 'Ready');
       const tabs = `<div class="grab"></div><div class="stabs" role="tablist">
-        <button role="tab" class="${!dockTab ? 'on' : ''}" aria-selected="${!dockTab}" data-a="sheettab" data-v="clean">${ic('mdi:robot-vacuum')}Clean</button>
-        <button role="tab" class="${dockTab ? 'on' : ''}" aria-selected="${dockTab}" data-a="sheettab" data-v="dock">${ic('mdi:home-lightning-bolt-outline')}Dock<span class="xs muted" style="font-weight:400">· ${dockShort}</span></button></div>`;
+        <button role="tab" class="${!dockTab ? 'on' : ''}" aria-selected="${!dockTab}" data-a="sheettab" data-v="clean">${ic('mdi:robot-vacuum')}${this._t('Clean')}</button>
+        <button role="tab" class="${dockTab ? 'on' : ''}" aria-selected="${dockTab}" data-a="sheettab" data-v="dock">${ic('mdi:home-lightning-bolt-outline')}${this._t('Dock')}<span class="xs muted" style="font-weight:400">· ${dockShort}</span></button></div>`;
       if (dockTab) return tabs + this._dockBlock(true);
       const body = [this._targets()];
       if (u.target === 'rooms') body.push(this._chips(false));
       else body.push(`<div class="small muted" style="min-height:24px;display:flex;align-items:center;gap:8px">${this._hint().replace(/<button/g, '<button class="link"')}</div>`);
-      if (u.sheetOpen) body.push(`<div class="stack" style="gap:14px">${this._cleaningControls()}</div><button class="btn sm ghost" data-a="sheet" style="align-self:center">${ic('mdi:chevron-down')}Done</button>`);
-      else body.push(`<button class="summary" data-a="sheet">${ic('mdi:tune-variant', 'style="color:var(--dv-pt)"')}<span class="grow ell">${esc(this._summary())}</span><span style="font-size:13px;font-weight:500;color:var(--dv-pt)">Adjust</span></button>`);
+      if (u.sheetOpen) body.push(`<div class="stack" style="gap:14px">${this._cleaningControls()}</div><button class="btn sm ghost" data-a="sheet" style="align-self:center">${ic('mdi:chevron-down')}${this._t('Done')}</button>`);
+      else body.push(`<button class="summary" data-a="sheet">${ic('mdi:tune-variant', 'style="color:var(--dv-pt)"')}<span class="grow ell">${esc(this._summary())}</span><span style="font-size:13px;font-weight:500;color:var(--dv-pt)">${this._t('Adjust')}</span></button>`);
       body.push(`<div class="rowf">${this._runButton('btn pri', 'style="flex:1;min-height:52px;border-radius:var(--dv-pill);font-size:16px"')}
-        <button class="btn sq" style="min-height:52px;width:52px;border-radius:var(--dv-pill)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
-        <button class="btn sq" style="min-height:52px;width:52px;border-radius:var(--dv-pill)" data-a="svc" data-v="return_to_base" aria-label="Send to dock">${ic('mdi:home-import-outline')}</button></div>`);
+        <button class="btn sq" style="min-height:52px;width:52px;border-radius:var(--dv-pill)" data-a="svc" data-v="stop" aria-label="${this._t('Stop')}">${ic('mdi:stop')}</button>
+        <button class="btn sq" style="min-height:52px;width:52px;border-radius:var(--dv-pill)" data-a="svc" data-v="return_to_base" aria-label="${this._t('Send to dock')}">${ic('mdi:home-import-outline')}</button></div>`);
       return tabs + body.join('');
     }
 
@@ -1432,8 +1564,8 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const v = this._views().find((x) => x[0] === this._ui.view);
       const cat = this._ui.view === 'settings' ? this._setCat() : null;
       const back = cat ? 'data-a="setcat" data-v=""' : 'data-a="view" data-v="clean"';
-      return `<button class="ibtn" ${back} aria-label="Back">${ic('mdi:arrow-left')}</button><h1 class="h grow ell" style="font-size:18px">${esc(cat ? cat.title : v ? v[1] : '')}</h1>
-        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="Open Home Assistant menu">${ic('mdi:menu')}</button>` : ''}${this._bell()}`;
+      return `<button class="ibtn" ${back} aria-label="${this._t('Back')}">${ic('mdi:arrow-left')}</button><h1 class="h grow ell" style="font-size:18px">${esc(cat ? cat.title : v ? v[1] : '')}</h1>
+        ${this._config.show_menu ? `<button class="ibtn" data-a="nav" data-v="menu" aria-label="${this._t('Open Home Assistant menu')}">${ic('mdi:menu')}</button>` : ''}${this._bell()}`;
     }
 
     /* ---------- full views ---------- */
@@ -1479,7 +1611,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (d === 'button') {
         const key = id.split('.')[1];
         const risky = DESTRUCTIVE.some((k) => key.endsWith(k));
-        return `<div class="row"><span class="name">${name}</span><button class="btn sm" data-a="press" data-e="${id}" ${risky ? 'data-confirm="1"' : ''} ${off ? 'disabled' : ''}>Run</button></div>`;
+        return `<div class="row"><span class="name">${name}</span><button class="btn sm" data-a="press" data-e="${id}" ${risky ? 'data-confirm="1"' : ''} ${off ? 'disabled' : ''}>${this._t('Run')}</button></div>`;
       }
       if (d === 'sensor' || d === 'binary_sensor') {
         const u = s.attributes.unit_of_measurement || '';
@@ -1520,7 +1652,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         const s = this._live('sensor', key);
         const raw = s ? s.state : this._a[attr];
         if (raw === undefined || raw === null) return '';
-        return `<div class="lv">${ic(icon)}<span><span class="muted">${label}</span><b>${esc(fmt ? fmt(raw, s) : raw)}</b></span></div>`;
+        return `<div class="lv">${ic(icon)}<span><span class="muted">${this._t(label)}</span><b>${esc(fmt ? fmt(raw, s) : raw)}</b></span></div>`;
       };
       const mins = (v, s) => {
         const u = s?.attributes?.unit_of_measurement || 'min';
@@ -1539,18 +1671,18 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
 
       const faultHtml = faults.map((n) => `<div class="alert crit" style="cursor:default">${ic(n.icon, 'style="color:var(--dv-errt)"')}<span class="grow"><b style="font-weight:500;display:block">${esc(n.title)}</b><span class="xs muted">${esc(n.desc)}</span></span>${n.action ? `<button class="btn sm" data-a="${n.action.a}" data-e="${n.action.e || ''}">${esc(n.action.label)}</button>` : ''}</div>`).join('');
       const dock = `<section class="panel pad">${this._dockBlock(lay === 'phone')}</section>`;
-      const partsHtml = `<section class="panel pad stack" style="gap:14px"><h2 class="h">Parts</h2><div class="parts">${parts.map((p) => {
+      const partsHtml = `<section class="panel pad stack" style="gap:14px"><h2 class="h">${this._t('Parts')}</h2><div class="parts">${parts.map((p) => {
         const color = p.pct <= crit ? 'var(--dv-err)' : p.pct <= warn ? 'var(--dv-warn)' : 'var(--dv-p)';
         const tcol = p.pct <= crit ? 'var(--dv-errt)' : p.pct <= warn ? 'var(--dv-warnt)' : 'var(--dv-text2)';
         return `<div class="part"><div class="ring" style="background:conic-gradient(${color} ${p.pct}%, var(--dv-div) 0)" role="img" aria-label="${esc(p.name)} ${p.pct}%"><span>${p.pct}%</span></div>
           <div class="grow"><div class="rowf" style="gap:6px">${ic(p.icon, 'style="--mdc-icon-size:16px;color:var(--dv-text2)"')}<b class="ell" style="font-weight:500;font-size:14px">${esc(p.name)}</b></div>
-          <div class="xs" style="margin-top:2px;color:${tcol}">${p.timeLeft !== null ? `${p.timeLeft} ${esc(p.unit)} left` : '&nbsp;'}</div></div>
-          <button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="Reset ${esc(p.name)}">Reset</button></div>`;
-      }).join('') || '<span class="muted small">No consumable data reported.</span>'}</div></section>`;
-      const lifetime = stats.length ? `<section class="panel pad stack" style="gap:14px"><h2 class="h">Lifetime</h2><div class="levels n${stats.length}">${stats.join('')}</div></section>` : '';
-      const settings = this._group('Dock settings', 'mdi:tune-variant', settingIds);
-      const tools = this._group('Dock tools', 'mdi:toolbox-outline', toolIds);
-      const head = this._viewHead('Dock & care', 'Dock, parts and lifetime totals');
+          <div class="xs" style="margin-top:2px;color:${tcol}">${p.timeLeft !== null ? this._t('{n} {unit} left', { n: p.timeLeft, unit: esc(p.unit) }) : '&nbsp;'}</div></div>
+          <button class="btn sm" data-a="reset" data-v="${p.key}" aria-label="${this._t('Reset {name}', { name: esc(p.name) })}">${this._t('Reset')}</button></div>`;
+      }).join('') || `<span class="muted small">${this._t('No consumable data reported.')}</span>`}</div></section>`;
+      const lifetime = stats.length ? `<section class="panel pad stack" style="gap:14px"><h2 class="h">${this._t('Lifetime')}</h2><div class="levels n${stats.length}">${stats.join('')}</div></section>` : '';
+      const settings = this._group(this._t('Dock settings'), 'mdi:tune-variant', settingIds);
+      const tools = this._group(this._t('Dock tools'), 'mdi:toolbox-outline', toolIds);
+      const head = this._viewHead(this._t('Dock & care'), this._t('Dock, parts and lifetime totals'));
       if (lay === 'desktop') {
         return `${head}<div class="stack">${faultHtml}<div style="display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:12px;align-items:start">
           <div class="stack">${dock}${settings}${tools}</div><div class="stack">${partsHtml}${lifetime}</div></div></div>`;
@@ -1565,15 +1697,15 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const used = new Set();
       const ids = (keys, domains) => this._keysFor(keys.filter((k) => k !== 'auto_water_refilling' || c.show_auto_water_refilling), domains);
       const cats = SETTINGS.map(([id, title, icon, desc, secs]) => {
-        let sections = secs.map(([t, keys]) => ({ title: t, ids: ids(keys) }));
+        let sections = secs.map(([t, keys]) => ({ title: t && this._t(t), ids: ids(keys) }));
         if (id === 'maint') {
           const btns = all.filter(([k]) => k.startsWith('button.') && !HIDDEN_BTN.test(k) && (k !== 'button.water_tank_draining' || c.show_water_tank_draining)).map(([, e]) => e);
-          sections = MAINT.map(([t, keys]) => ({ title: t, ids: ids(keys, ['button']).filter((e) => btns.includes(e)) }));
+          sections = MAINT.map(([t, keys]) => ({ title: this._t(t), ids: ids(keys, ['button']).filter((e) => btns.includes(e)) }));
           const taken = new Set(sections.flatMap((x) => x.ids));
-          sections.push({ title: 'More', ids: btns.filter((e) => !taken.has(e)) });
+          sections.push({ title: this._t('More'), ids: btns.filter((e) => !taken.has(e)) });
         }
         sections.forEach((x) => x.ids.forEach((e) => used.add(e)));
-        return { id, title, icon, desc, sections };
+        return { id, title: this._t(title), icon, desc: this._t(desc), sections };
       });
       // Leftover settings the lists above don't know about go to System › More.
       const skip = new Set(CLEAN_KEYS);
@@ -1582,7 +1714,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         return ['switch', 'select', 'number', 'time'].includes(d) && !used.has(e) && !skip.has(key)
           && (key !== 'auto_water_refilling' || c.show_auto_water_refilling);
       }).map(([, e]) => e);
-      cats.find((x) => x.id === 'system').sections.push({ title: 'More', ids: other });
+      cats.find((x) => x.id === 'system').sections.push({ title: this._t('More'), ids: other });
       const roomKeys = Object.keys(this._map).filter((k) => /^(switch|select|number|time)\.room_\d+_/.test(k));
       const out = cats.map((cat) => {
         cat.sections = cat.sections.filter((x) => x.ids.length);
@@ -1604,14 +1736,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const cats = this._setCats();
       const lay = this._layout();
       const cur = this._setCat();
-      if (!cats.length) return `${this._viewHead('Settings')}<section class="panel pad muted">No settings found for this robot.</section>`;
-      const list = `<nav class="panel slist" aria-label="Settings categories">${cats.map((cat) => {
+      if (!cats.length) return `${this._viewHead(this._t('Settings'))}<section class="panel pad muted">${this._t('No settings found for this robot.')}</section>`;
+      const list = `<nav class="panel slist" aria-label="${this._t('Settings categories')}">${cats.map((cat) => {
         const on = cur && cat.id === cur.id && lay !== 'phone';
         return `<button class="sitem ${on ? 'on' : ''}" data-a="setcat" data-v="${cat.id}" ${on ? 'aria-current="true"' : ''}><span class="sic">${ic(cat.icon)}</span>
           <span class="grow" style="min-width:0"><b>${esc(cat.title)}</b><span class="xs muted ell">${esc(cat.desc)}</span></span>${ic('mdi:chevron-right')}</button>`;
       }).join('')}</nav>`;
       if (lay === 'phone') return cur ? `<div class="sdet">${this._setDetail(cur)}</div>` : list;
-      return `${this._viewHead('Settings', `${this._title()} · changes apply right away`)}
+      return `${this._viewHead(this._t('Settings'), this._t('{name} · changes apply right away', { name: this._title() }))}
         <div class="sset">${list}<div class="sdet" data-keep="set-${cur.id}">${this._setDetail(cur)}</div></div>`;
     }
 
@@ -1620,7 +1752,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         <div class="small muted" style="margin-top:2px">${esc(cat.desc)}</div></div></div>`;
       if (cat.id === 'rooms') return head + this._roomSettings();
       return head + cat.sections.map((x) => `<section class="ssec">${x.title ? `<h3 class="lbl" style="margin:0">${esc(x.title)}</h3>` : ''}
-        <div class="panel">${x.ids.map((e) => this._control(e)).join('')}</div></section>`).join('');
+        <div class="panel">${x.ids.map((e) => this._control(e, this._label(e))).join('')}</div></section>`).join('');
+    }
+
+    /** Card label for a setting listed in LABELS, otherwise undefined (the entity's own name is used). */
+    _label(id) {
+      const k = Object.keys(this._map).find((x) => this._map[x] === id);
+      const key = k && k.split('.')[1];
+      return LABELS[key] ? this._t(LABELS[key]) : undefined;
     }
 
     _roomSettings() {
@@ -1628,15 +1767,14 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       if (!rooms.length) return '';
       const rid = rooms.some((r) => r.id === this._ui.room) ? this._ui.room : rooms[0].id;
       const pre = `room_${rid}_`;
-      const order = ['cleaning_mode', 'suction_level', 'wetness_level', 'mop_pad_humidity', 'water_volume', 'cleaning_route', 'cleaning_times', 'order', 'floor_material', 'floor_material_direction', 'name'];
-      const rank = (k) => { const i = order.indexOf(k); return i < 0 ? order.length : i; };
+      const rank = (k) => { const i = ROOM_KEYS.indexOf(k); return i < 0 ? ROOM_KEYS.length : i; };
       const ids = Object.entries(this._map).filter(([k]) => /^(switch|select|number|time)\./.test(k) && k.split('.')[1]?.startsWith(pre))
         .map(([k, id]) => [k.split('.')[1].slice(pre.length), id]).sort((x, y) => rank(x[0]) - rank(y[0]));
-      const rows = ids.map(([k, id]) => this._control(id, human(k))).join('');
+      const rows = ids.map(([k, id]) => this._control(id, ROOM_KEYS.includes(k) ? this._t(human(k)) : human(k))).join('');
       const chips = `<div class="chips wrap" style="justify-content:flex-start">${rooms.map((r) => `<button class="chip ${r.id === rid ? 'on' : ''}" aria-pressed="${r.id === rid}" data-a="setroom" data-v="${r.id}">${esc(r.name)}</button>`).join('')}</div>`;
-      return `<section class="ssec"><h3 class="lbl" style="margin:0">Room</h3>${chips}</section>
+      return `<section class="ssec"><h3 class="lbl" style="margin:0">${this._t('Room')}</h3>${chips}</section>
         <section class="ssec"><h3 class="lbl" style="margin:0">${esc((rooms.find((r) => r.id === rid) || {}).name || '')}</h3>
-        <div class="panel">${rows || '<div class="row small muted">No per-room settings for this room.</div>'}</div></section>`;
+        <div class="panel">${rows || `<div class="row small muted">${this._t('No per-room settings for this room.')}</div>`}</div></section>`;
     }
 
     _historyItems() {
@@ -1652,7 +1790,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const sel = items[this._ui.hist] || items[0];
       const obs = Object.entries(this._cam?.attributes?.obstacle_picture || {});
       const url = (u) => (this._hass.hassUrl ? this._hass.hassUrl(u) : u);
-      if (!items.length) return `${this._viewHead('History')}<section class="panel pad muted">No cleaning history reported yet.</section>`;
+      if (!items.length) return `${this._viewHead(this._t('History'))}<section class="panel pad muted">${this._t('No cleaning history reported yet.')}</section>`;
       const list = items.map((it, i) => {
         const on = it === sel;
         const ok = /complete/i.test(it.status);
@@ -1661,28 +1799,28 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
           <span class="grow"><span style="display:block;font-size:14px;font-weight:500">${esc(it.title)}</span><span class="xs muted">${esc(it.when)}</span></span>
           <span class="xs" style="color:${ok ? 'var(--dv-text2)' : 'var(--dv-warnt)'}">${esc(it.status)}</span></button>`;
       }).join('');
-      return `${this._viewHead('History', `${items.length} recent runs`)}
+      return `${this._viewHead(this._t('History'), this._t(items.length === 1 ? '{n} recent run' : '{n} recent runs', { n: items.length }))}
         <div class="hist"><section class="panel hlist">${list}</section>
           <section class="panel pad stack" style="min-height:0">
             <div class="between"><div><h2 class="h">${esc(sel.title)}</h2><div class="small muted">${esc(sel.when)}</div></div><span class="small" style="color:${/complete/i.test(sel.status) ? 'var(--dv-ok)' : 'var(--dv-warnt)'}">${esc(sel.status)}</span></div>
-            <div class="himg" style="flex:1 1 auto"><img src="${esc(url(sel.url))}" alt="Map of the ${esc(sel.title)} run" loading="lazy"></div>
-            ${obs.length ? `<div class="stack-s"><span class="lbl">Obstacle photos</span><div class="obs">${obs.slice(0, 8).map(([k, u]) => `<figure><img src="${esc(url(u))}" alt="${esc(k)}" loading="lazy"><figcaption class="muted">${esc(k.replace(/^\d+:\s*/, '').replace(/%(\d+)/, '$1%'))}</figcaption></figure>`).join('')}</div></div>` : ''}
+            <div class="himg" style="flex:1 1 auto"><img src="${esc(url(sel.url))}" alt="${this._t('Map of the {title} run', { title: esc(sel.title) })}" loading="lazy"></div>
+            ${obs.length ? `<div class="stack-s"><span class="lbl">${this._t('Obstacle photos')}</span><div class="obs">${obs.slice(0, 8).map(([k, u]) => `<figure><img src="${esc(url(u))}" alt="${esc(k)}" loading="lazy"><figcaption class="muted">${esc(k.replace(/^\d+:\s*/, '').replace(/%(\d+)/, '$1%'))}</figcaption></figure>`).join('')}</div></div>` : ''}
           </section></div>`;
     }
 
     _remoteView() {
       const sp = this._ui.speed;
       return `<div class="stack" style="gap:18px">
-        <div><h1 class="h-xl">Remote control</h1><div class="small muted" style="margin-top:4px">Press and hold to drive. Obstacle sensors stay on.</div></div>
-        <div class="dpad" role="group" aria-label="Direction pad">
-          <button style="top:10px;left:calc(50% - var(--b) / 2)" data-hold="fwd" aria-label="Forward">${ic('mdi:arrow-up-bold')}</button>
-          <button style="bottom:10px;left:calc(50% - var(--b) / 2)" data-hold="back" aria-label="Backward">${ic('mdi:arrow-down-bold')}</button>
-          <button style="top:calc(50% - var(--b) / 2);left:10px" data-hold="left" aria-label="Turn left">${ic('mdi:rotate-left')}</button>
-          <button style="top:calc(50% - var(--b) / 2);right:10px" data-hold="right" aria-label="Turn right">${ic('mdi:rotate-right')}</button>
-          <button class="c" style="top:calc(50% - var(--b) / 2);left:calc(50% - var(--b) / 2)" data-a="svc" data-v="stop" aria-label="Stop">${ic('mdi:stop')}</button>
+        <div><h1 class="h-xl">${this._t('Remote control')}</h1><div class="small muted" style="margin-top:4px">${this._t('Press and hold to drive. Obstacle sensors stay on.')}</div></div>
+        <div class="dpad" role="group" aria-label="${this._t('Direction pad')}">
+          <button style="top:10px;left:calc(50% - var(--b) / 2)" data-hold="fwd" aria-label="${this._t('Forward')}">${ic('mdi:arrow-up-bold')}</button>
+          <button style="bottom:10px;left:calc(50% - var(--b) / 2)" data-hold="back" aria-label="${this._t('Backward')}">${ic('mdi:arrow-down-bold')}</button>
+          <button style="top:calc(50% - var(--b) / 2);left:10px" data-hold="left" aria-label="${this._t('Turn left')}">${ic('mdi:rotate-left')}</button>
+          <button style="top:calc(50% - var(--b) / 2);right:10px" data-hold="right" aria-label="${this._t('Turn right')}">${ic('mdi:rotate-right')}</button>
+          <button class="c" style="top:calc(50% - var(--b) / 2);left:calc(50% - var(--b) / 2)" data-a="svc" data-v="stop" aria-label="${this._t('Stop')}">${ic('mdi:stop')}</button>
         </div>
-        <div class="stack-s"><span class="lbl">Speed</span><div class="seg" role="group" aria-label="Speed">${[['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']].map(([id, l]) => `<button class="${sp === id ? 'on' : ''}" aria-pressed="${sp === id}" data-a="speed" data-v="${id}">${l}</button>`).join('')}</div></div>
-        <div class="rowf"><button class="btn" style="flex:1" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}Send to dock</button></div>
+        <div class="stack-s"><span class="lbl">${this._t('Speed')}</span><div class="seg" role="group" aria-label="${this._t('Speed')}">${[['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']].map(([id, l]) => `<button class="${sp === id ? 'on' : ''}" aria-pressed="${sp === id}" data-a="speed" data-v="${id}">${this._t(l)}</button>`).join('')}</div></div>
+        <div class="rowf"><button class="btn" style="flex:1" data-a="svc" data-v="return_to_base">${ic('mdi:home-import-outline')}${this._t('Send to dock')}</button></div>
       </div>`;
     }
 
@@ -1729,7 +1867,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         case 'opt': this._call('select', 'select_option', { entity_id: e, option: v }); break;
         case 'toggle': this._call('switch', 'toggle', { entity_id: e }); break;
         case 'press':
-          if (el.dataset.confirm && !window.confirm(`Run "${this._name(e)}" now?`)) return;
+          if (el.dataset.confirm && !window.confirm(this._t('Run "{name}" now?', { name: this._name(e) }))) return;
           this._call('button', 'press', { entity_id: e });
           break;
         case 'reset': this._reset(v); break;
@@ -1880,7 +2018,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
         await this._hass.callService(domain, service, data);
       } catch (err) {
         if (!quiet) {
-          this.dispatchEvent(new CustomEvent('hass-notification', { detail: { message: `${domain}.${service} failed: ${err?.message || err}` }, bubbles: true, composed: true }));
+          this.dispatchEvent(new CustomEvent('hass-notification', { detail: { message: this._t('{service} failed: {error}', { service: `${domain}.${service}`, error: err?.message || err }) }, bubbles: true, composed: true }));
         }
         // eslint-disable-next-line no-console
         console.warn(`[${TAG}]`, domain, service, err);

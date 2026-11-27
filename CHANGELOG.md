@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **French translation.** The card's own labels (menus, buttons, hints, care alerts, the
+  settings menu, part names and the visual editor) are now available in French. The card
+  follows your Home Assistant profile language and falls back to English; the new `language`
+  option (`auto`, `en`, `fr`) overrides it. Entity names, states and options still come from
+  Home Assistant's own translations.
+- Parts whose key ends in `_dirty` (wheel, fluffing roller, roller mop filter, water outlet
+  filter) now show their name instead of "Wheel dirty" and the like, and their reset uses the
+  right counter. The dirty water channel gets a name too.
+- **Schedule** settings drop the repeated prefix: "DND start" and "DND end" read Start time and
+  End time under Do not disturb (same for Off-peak charging), and the DND switch reads
+  Do not disturb.
+- The per-room **Visibility** setting is labelled like the other room settings.
+- The screenshot harness takes a `lang` query parameter and pins English by default.
+
 ## 0.3.1
 
 - **New screenshots** of the 0.3.0 layout, with more in a "More screenshots" section. Images

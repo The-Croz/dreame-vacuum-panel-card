@@ -81,6 +81,8 @@ The screenshots use a made-up floor plan. To retake them, see [`tools/screenshot
   and stops the page from scrolling. Optional back and menu buttons appear in every layout.
 - **Blends in.** The card uses your theme's colors, corner radius and font, and works in light
   and dark mode. It has no external dependencies: one JavaScript file, no build step.
+- **English and French.** The card's own labels follow your Home Assistant profile language.
+  Entity names, states and options come from Home Assistant's own translations.
 
 ## Requirements
 
@@ -154,6 +156,7 @@ More examples are in [`examples/`](examples).
 | `care_critical` | `10` | At or below this %, the alert turns red. |
 | `show_water_tank_draining` | `false` | Shows the Water Tank Draining action. Only for docks with the drain-and-refill kit. |
 | `show_auto_water_refilling` | `false` | Shows the Auto Water Refilling switch. Only for docks with the drain-and-refill kit. |
+| `language` | `auto` | Language of the card's own labels: `auto` (your Home Assistant profile language), `en` or `fr`. Other languages fall back to English. |
 | `entities` | — | Overrides for entities the card can't find, for example `select.suction_level: select.robot_fan`. |
 
 Everything except `entities` and `fullscreen: force` can be set in the visual editor.
@@ -223,7 +226,7 @@ Things we found while testing on a real robot (Dreame with a self-wash, auto-emp
 
 - Editing the map (split and merge rooms, no-go zones, virtual walls)
 - Several zones in one run
-- Translations for the card's own labels
+- More languages (add a block to `I18N` in the card file)
 
 ## Credits
 
