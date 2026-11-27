@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Edit a drawn zone.** Like in the Dreame app, a zone has a handle at each corner: drag
+  inside it to move it, or drag a handle to resize it while the opposite corner stays put.
+  Dragging outside the zone still draws a new one. The zone keeps its 30 cm minimum, the size
+  label updates as you go, and a pinch started mid-edit puts the zone back.
 - **Map zoom.** Pinch with two fingers to zoom and move the map, on every layout. With a
   mouse, the wheel zooms around the cursor and dragging moves the zoomed map. Room pills, the
   spot and the zone outline keep their size while zoomed. The map goes back to the full view
