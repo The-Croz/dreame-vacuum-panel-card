@@ -905,7 +905,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       const lay = this._layout();
       const top = box.querySelector('.map-top');
       const bot = box.querySelector('.map-bottom');
-      const padT = lay === 'phone' ? 8 : (top ? top.offsetHeight + 20 : 12);
+      const padT = lay === 'phone' ? (top && top.offsetHeight ? top.offsetHeight + 16 : 8) : (top ? top.offsetHeight + 20 : 12);
       const padB = lay === 'phone' ? 8 : (bot ? bot.offsetHeight + 20 : 12);
       const W = box.clientWidth - 24, H = box.clientHeight - padT - padB;
       if (W <= 0 || H <= 0) return;
@@ -1113,7 +1113,7 @@ input.time{font:inherit;font-size:14px;color:var(--dv-text);background:var(--dv-
       }
       // phone
       if (view === 'clean') {
-        return `<div class="ph">${this._mapShell(false).replace('class="panel mapbox"', 'class="mapbox" style="position:absolute;inset:0;border:0;border-radius:0"')}
+        return `<div class="ph">${this._mapShell(false).replace('class="panel mapbox"', 'class="mapbox" style="position:absolute;inset:0;border:0;border-radius:0"').replace('</div></section>', '<div class="map-top" data-r="maptop"></div></div></section>')}
           <div class="ph-top" data-r="phtop"></div><div data-r="toast"></div>
           <section class="sheet" data-r="sheet" aria-label="${this._t('Controls')}"></section><div data-r="pop"></div></div>`;
       }
